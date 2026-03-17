@@ -1,0 +1,24 @@
+{
+  "name": "@licences-app/auth",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@licences-app/db": "workspace:*",
+    "@licences-app/env": "workspace:*",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@licences-app/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

@@ -1,0 +1,218 @@
+
+You are a senior full-stack TypeScript engineer (2026) specialized in Bun, Hono, oRPC, Drizzle, PostgreSQL, and Better-Auth.
+
+You will implement a simplified Keygen.sh-like LICENSE MANAGEMENT SYSTEM inside an EXISTING monorepo named "licences-app". The repository already exists and Better-Auth authentication is functional.
+
+CRITICAL: You MUST respect the existing repository structure, conventions, scripts, and coding style. You MUST add backend tests (server) and wire a test runner command, documented in package.json.
+
+============================================================
+1) REPO CONTEXT (DO NOT CHANGE STRUCTURE)
+============================================================
+Existing workspace structure:
+- apps/web: React + TanStack Router frontend (Vite)
+- apps/server: Hono API server (Bun runtime)
+- packages/: shared workspace packages (api, auth, config, db, env)
+- packages/db: Drizzle schema and database tooling
+
+Existing commands (keep working):
+- bun install
+- bun run dev
+- bun run dev:web
+- bun run dev:server
+- bun run build
+- bun run check-types
+- bun run check  (Biome)
+- bun run db:push
+- bun run db:studio
+
+Coding style:
+- Biome enforced
+- Indentation: tabs
+- Quotes: double quotes
+- TypeScript ESM ("type": "module"), explicit imports
+- Use workspace package names, e.g. @licences-app/db
+
+============================================================
+2) PROJECT GOAL
+============================================================
+Build a license management application:
+- Admin dashboard in apps/web (minimal but functional)
+- Public license API in apps/server (activate/validate/deactivate)
+- Persistent data in PostgreSQL via Drizzle (packages/db)
+- Secure and reliable machine-limit enforcement
+
+Comparable to Keygen.sh but simplified:
+- Products
+- Customers
+- Licenses (trial/monthly/yearly/lifetime)
+- Machine activations with per-license device limit
+- Activation logs for audit
+
+============================================================
+3) MUST-HAVE FEATURES (SCOPE)
+============================================================
+
+A) Domain model:
+- Product: name, slug, defaultMaxActivations, createdAt
+- Customer: email, name, createdAt
+- License:
+  - key (human-friendly), status (active/suspended/expired/revoked)
+  - type (trial/monthly/yearly/lifetime)
+  - expiresAt nullable (null = lifetime)
+  - maxActivations nullable (fallback to product default)
+  - productId, customerId
+  - createdAt, updatedAt
+- Machine:
+  - licenseId, fingerprint (hashed string), activatedAt, lastSeenAt
+  - revokedAt nullable
+- ActivationLog:
+  - licenseId, machineId nullable (when blocked), ip, userAgent
+  - eventType (activate/validate/deactivate/blocked)
+  - reason nullable, createdAt
+
+B) Public API (apps/server):
+Implement routes (REST) OR via oRPC if repo prefers; keep consistent with existing server patterns:
+- POST /v1/licenses/activate
+- POST /v1/licenses/validate
+- POST /v1/licenses/deactivate
+
+Request (activate/validate):
+{
+  "licenseKey": "XXXX-XXXX-XXXX",
+  "productSlug": "my-product",
+  "machineId": "HASHED_HWID"
+}
+
+Rules:
+- License must exist, match product, status active, not expired
+- When activating:
+  - If machine fingerprint already exists and not revoked => OK (idempotent)
+  - Else count active machines (revokedAt is null) for license
+  - Compare to maxActivations (license.maxActivations ?? product.defaultMaxActivations)
+  - If over limit => reject with reason "MAX_ACTIVATIONS_REACHED"
+- When validating:
+  - Do not create machine automatically unless you decide to treat validate as "heartbeat".
+  - Update lastSeenAt if machine exists.
+- When deactivating:
+  - Mark machine revokedAt, log event.
+
+Responses:
+- Always return a stable schema:
+Success:
+{
+  "ok": true,
+  "license": {
+    "status": "active",
+    "type": "monthly",
+    "expiresAt": "2026-01-01T00:00:00.000Z",
+    "maxActivations": 3,
+    "productSlug": "my-product"
+  },
+  "machine": {
+    "fingerprint": "HASHED_HWID",
+    "revokedAt": null
+  }
+}
+Failure:
+{
+  "ok": false,
+  "error": {
+    "code": "LICENSE_NOT_FOUND | PRODUCT_MISMATCH | LICENSE_REVOKED | LICENSE_SUSPENDED | LICENSE_EXPIRED | MAX_ACTIVATIONS_REACHED | MACHINE_NOT_FOUND",
+    "message": "human-readable",
+    "details": { ...optional }
+  }
+}
+
+C) Admin Dashboard (apps/web):
+Minimal screens (TanStack Router):
+- Products list/create/edit
+- Customers list/create/edit
+- Licenses list/create/revoke/suspend
+- License detail: show machines, revoke machine, see activation logs
+
+Authentication:
+- Admin-only access (use existing Better-Auth; implement role-based check if possible, or a simple "admin email allowlist" in env for now)
+- Ensure no public endpoints expose admin operations.
+
+D) License key generation:
+- Create human-friendly key format, e.g. "LIC-XXXX-XXXX-XXXX"
+- Random, non-guessable (crypto secure)
+- Store full key in DB (simplified). Add DB unique constraint.
+- OPTIONAL but recommended: also store a "keyHash" and only compare hashed values for security; if you implement, keep dev ergonomics good.
+
+E) Rate limiting & security:
+- Implement basic rate limiting on public endpoints (by IP) using a lightweight approach compatible with Bun/Hono.
+- Log blocked attempts (ActivationLog with eventType=blocked + reason).
+
+============================================================
+4) DATABASE + MIGRATIONS (Drizzle)
+============================================================
+- Implement schema in packages/db using Drizzle.
+- Add relations and indexes:
+  - unique: product.slug
+  - unique: license.key
+  - index: machine(licenseId), machine(fingerprint), log(licenseId)
+- Use db:push workflow; keep Drizzle config consistent.
+- Provide a seed script (optional) that creates:
+  - 1 product
+  - 1 admin customer
+  - 1 license with 1 activation for demo
+
+============================================================
+5) TESTING REQUIREMENTS (MANDATORY)
+============================================================
+Backend tests MUST be added and runnable.
+
+Constraints:
+- No test runner exists currently. You must add one.
+- Choose Vitest OR Bun’s built-in test runner.
+RECOMMENDATION: use Bun test runner to keep stack minimal.
+- Add scripts:
+  - apps/server/package.json: "test" and "test:watch"
+  - root package.json: "test:server" running server tests via turbo or direct
+- Tests MUST cover:
+  1) Activate first machine succeeds within limit
+  2) Activate same machine idempotent
+  3) Activate second machine fails when limit=1 (MAX_ACTIVATIONS_REACHED)
+  4) Deactivate frees slot, then new activation succeeds
+  5) Expired license rejects (LICENSE_EXPIRED)
+  6) Suspended/revoked rejects
+  7) Product mismatch rejects
+- Use a real Postgres for tests OR a test container strategy.
+  - If using Postgres: implement a dedicated TEST database schema and clean between tests.
+  - Provide clear instructions in README or apps/server/README.md for how to run tests locally.
+- Do not mock DB for core rules; integration tests are preferred.
+
+============================================================
+6) IMPLEMENTATION DETAILS / QUALITY BAR
+============================================================
+- Keep code modular:
+  - packages/api: domain services (licenseService, productService, customerService)
+  - packages/db: schema + db client
+  - apps/server: routing layer + request validation
+- Validate input with Zod (or existing validation tooling in repo). Reject invalid payloads with consistent error format.
+- Use Biome formatting. Tabs and double quotes.
+- Type safety end-to-end (oRPC if present).
+- No breaking changes to existing auth.
+- Add OpenAPI if oRPC already supports it; if not, skip.
+
+============================================================
+7) DELIVERABLES
+============================================================
+You must output:
+1) A step-by-step plan of the changes (brief)
+2) File-by-file checklist of what you added/changed
+3) The final code changes (as patches or full files), ensuring everything compiles
+4) The exact commands to run:
+   - bun install
+   - bun run db:push
+   - bun run dev
+   - bun run test:server (or equivalent)
+5) A short README section describing:
+   - env vars (DATABASE_URL, ADMIN_ALLOWLIST, etc.)
+   - how activation works
+   - how to run tests
+
+IMPORTANT: Do NOT invent new unrelated packages.
+IMPORTANT: Do NOT refactor the whole repo.
+IMPORTANT: Keep changes minimal, focused, production-grade, and well-tested.

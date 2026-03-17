@@ -1,0 +1,113 @@
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-server-env: &server-env
+  NODE_ENV: production
+  DATABASE_URL: ${DATABASE_URL}
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+  BETTER_AUTH_URL: ${PUBLIC_URL}
+  CORS_ORIGIN: ${PUBLIC_URL}
+  ADMIN_ALLOWLIST: ${ADMIN_ALLOWLIST}
+  LICENSE_TOKEN_PRIVATE_KEY: ${LICENSE_TOKEN_PRIVATE_KEY}
+  LICENSE_TOKEN_PUBLIC_KEY: ${LICENSE_TOKEN_PUBLIC_KEY}
+  LICENSE_OFFLINE_DAYS: ${LICENSE_OFFLINE_DAYS:-7}
+  RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+  RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-60}
+  PORT: 3000
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    logging: *default-logging
+
+  migrate:
+    build:
+      context: .
+      dockerfile: docker/server.Dockerfile
+      target: migrate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    networks:
+      - internal
+    logging: *default-logging
+
+  server:
+    build:
+      context: .
+      dockerfile: docker/server.Dockerfile
+      target: runtime
+    init: true
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment: *server-env
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    networks:
+      - internal
+    logging: *default-logging
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+      args:
+        VITE_SERVER_URL: ${PUBLIC_URL}
+        APP_DOMAIN: ${APP_DOMAIN}
+    init: true
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      API_DOMAIN: ${API_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    networks:
+      - internal
+      - dokploy-network
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      - traefik.http.routers.licences.rule=Host(`${APP_DOMAIN}`) || Host(`${API_DOMAIN}`)
+      - traefik.http.routers.licences.entrypoints=websecure
+      - traefik.http.routers.licences.tls=true
+      - traefik.http.services.licences.loadbalancer.server.port=80
+    logging: *default-logging
+
+volumes:
+  postgres_data:
+
+networks:
+  internal:
+  dokploy-network:
+    external: true

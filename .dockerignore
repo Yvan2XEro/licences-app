@@ -1,0 +1,15 @@
+node_modules
+.turbo
+dist
+build
+coverage
+.git
+.github
+.vscode
+.idea
+.DS_Store
+tmp
+temp
+_todelete
+apps/web/dist
+apps/server/dist
