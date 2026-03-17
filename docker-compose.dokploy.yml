@@ -30,7 +30,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - internal
+      - dokploy-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -51,7 +51,7 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
     networks:
-      - internal
+      - dokploy-network
     logging: *default-logging
 
   server:
@@ -72,18 +72,17 @@ services:
     tmpfs:
       - /tmp
     networks:
-      - internal
       - dokploy-network
     logging: *default-logging
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=dokploy-network"
-      - "traefik.http.routers.licences-api.rule=Host(`${API_DOMAIN}`)"
-      - "traefik.http.routers.licences-api.entrypoints=websecure"
-      - "traefik.http.routers.licences-api.tls=true"
-      - "traefik.http.routers.licences-api.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.licences-api.service=licences-api"
-      - "traefik.http.services.licences-api.loadbalancer.server.port=3000"
+      - "traefik.http.routers.licences_api.rule=Host(`${API_DOMAIN}`)"
+      - "traefik.http.routers.licences_api.entrypoints=websecure"
+      - "traefik.http.routers.licences_api.tls=true"
+      - "traefik.http.routers.licences_api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.licences_api.service=licences_api"
+      - "traefik.http.services.licences_api.loadbalancer.server.port=3000"
 
   web:
     build:
@@ -103,25 +102,23 @@ services:
       API_DOMAIN: ${API_DOMAIN}
       ACME_EMAIL: ${ACME_EMAIL}
     networks:
-      - internal
       - dokploy-network
     security_opt:
       - no-new-privileges:true
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=dokploy-network"
-      - "traefik.http.routers.licences-web.rule=Host(`${APP_DOMAIN}`)"
-      - "traefik.http.routers.licences-web.entrypoints=websecure"
-      - "traefik.http.routers.licences-web.tls=true"
-      - "traefik.http.routers.licences-web.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.licences-web.service=licences-web"
-      - "traefik.http.services.licences-web.loadbalancer.server.port=80"
+      - "traefik.http.routers.licences_web.rule=Host(`${APP_DOMAIN}`)"
+      - "traefik.http.routers.licences_web.entrypoints=websecure"
+      - "traefik.http.routers.licences_web.tls=true"
+      - "traefik.http.routers.licences_web.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.licences_web.service=licences_web"
+      - "traefik.http.services.licences_web.loadbalancer.server.port=80"
     logging: *default-logging
 
 volumes:
   postgres_data:
 
 networks:
-  internal:
   dokploy-network:
     external: true

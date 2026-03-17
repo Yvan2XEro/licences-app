@@ -30,7 +30,6 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - internal
       - dokploy-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
@@ -52,7 +51,6 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
     networks:
-      - internal
       - dokploy-network
     logging: *default-logging
 
@@ -74,15 +72,14 @@ services:
     tmpfs:
       - /tmp
     networks:
-      - internal
       - dokploy-network
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=dokploy-network"
-      - "traefik.http.routers.licences-api-lan.rule=Host(`${API_DOMAIN}`)"
-      - "traefik.http.routers.licences-api-lan.entrypoints=web"
-      - "traefik.http.routers.licences-api-lan.service=licences-api-lan"
-      - "traefik.http.services.licences-api-lan.loadbalancer.server.port=3000"
+      - "traefik.http.routers.licences_api_lan.rule=Host(`${API_DOMAIN}`)"
+      - "traefik.http.routers.licences_api_lan.entrypoints=web"
+      - "traefik.http.routers.licences_api_lan.service=licences_api_lan"
+      - "traefik.http.services.licences_api_lan.loadbalancer.server.port=3000"
     logging: *default-logging
 
   web:
@@ -103,23 +100,21 @@ services:
       API_DOMAIN: ${API_DOMAIN}
       ACME_EMAIL: ${ACME_EMAIL}
     networks:
-      - internal
       - dokploy-network
     security_opt:
       - no-new-privileges:true
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=dokploy-network"
-      - "traefik.http.routers.licences-web-lan.rule=Host(`${APP_DOMAIN}`)"
-      - "traefik.http.routers.licences-web-lan.entrypoints=web"
-      - "traefik.http.routers.licences-web-lan.service=licences-web-lan"
-      - "traefik.http.services.licences-web-lan.loadbalancer.server.port=80"
+      - "traefik.http.routers.licences_web_lan.rule=Host(`${APP_DOMAIN}`)"
+      - "traefik.http.routers.licences_web_lan.entrypoints=web"
+      - "traefik.http.routers.licences_web_lan.service=licences_web_lan"
+      - "traefik.http.services.licences_web_lan.loadbalancer.server.port=80"
     logging: *default-logging
 
 volumes:
   postgres_data:
 
 networks:
-  internal:
   dokploy-network:
     external: true
