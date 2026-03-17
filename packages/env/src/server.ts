@@ -8,6 +8,7 @@ export const env = createEnv({
     DATABASE_URL: z.string().min(1),
     BETTER_AUTH_SECRET: z.string().min(32),
     BETTER_AUTH_URL: z.url(),
+    BETTER_AUTH_SECURE_COOKIES: z.coerce.boolean().optional(),
     CORS_ORIGIN: z.url(),
     LICENSE_TOKEN_PRIVATE_KEY: z.string().optional(),
     LICENSE_TOKEN_PUBLIC_KEY: z.string().optional(),

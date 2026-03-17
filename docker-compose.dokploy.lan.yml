@@ -9,7 +9,7 @@ x-server-env: &server-env
   DATABASE_URL: ${DATABASE_URL}
   BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
   BETTER_AUTH_URL: ${PUBLIC_URL}
-  BETTER_AUTH_SECURE_COOKIES: ${BETTER_AUTH_SECURE_COOKIES:-true}
+  BETTER_AUTH_SECURE_COOKIES: ${BETTER_AUTH_SECURE_COOKIES:-false}
   CORS_ORIGIN: ${PUBLIC_URL}
   ADMIN_ALLOWLIST: ${ADMIN_ALLOWLIST}
   LICENSE_TOKEN_PRIVATE_KEY: ${LICENSE_TOKEN_PRIVATE_KEY}
@@ -31,6 +31,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - internal
+      - dokploy-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -52,6 +53,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
     networks:
       - internal
+      - dokploy-network
     logging: *default-logging
 
   server:
@@ -74,16 +76,14 @@ services:
     networks:
       - internal
       - dokploy-network
-    logging: *default-logging
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=dokploy-network"
-      - "traefik.http.routers.licences-api.rule=Host(`${API_DOMAIN}`)"
-      - "traefik.http.routers.licences-api.entrypoints=websecure"
-      - "traefik.http.routers.licences-api.tls=true"
-      - "traefik.http.routers.licences-api.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.licences-api.service=licences-api"
-      - "traefik.http.services.licences-api.loadbalancer.server.port=3000"
+      - "traefik.http.routers.licences-api-lan.rule=Host(`${API_DOMAIN}`)"
+      - "traefik.http.routers.licences-api-lan.entrypoints=web"
+      - "traefik.http.routers.licences-api-lan.service=licences-api-lan"
+      - "traefik.http.services.licences-api-lan.loadbalancer.server.port=3000"
+    logging: *default-logging
 
   web:
     build:
@@ -109,12 +109,10 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=dokploy-network"
-      - "traefik.http.routers.licences-web.rule=Host(`${APP_DOMAIN}`)"
-      - "traefik.http.routers.licences-web.entrypoints=websecure"
-      - "traefik.http.routers.licences-web.tls=true"
-      - "traefik.http.routers.licences-web.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.licences-web.service=licences-web"
-      - "traefik.http.services.licences-web.loadbalancer.server.port=80"
+      - "traefik.http.routers.licences-web-lan.rule=Host(`${APP_DOMAIN}`)"
+      - "traefik.http.routers.licences-web-lan.entrypoints=web"
+      - "traefik.http.routers.licences-web-lan.service=licences-web-lan"
+      - "traefik.http.services.licences-web-lan.loadbalancer.server.port=80"
     logging: *default-logging
 
 volumes:

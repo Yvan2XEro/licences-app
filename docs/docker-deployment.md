@@ -4,6 +4,7 @@ This repository now has two production-oriented Docker stacks:
 
 - `docker-compose.yml`: direct deployment with Caddy terminating TLS itself
 - `docker-compose.dokploy.yml`: Dokploy deployment using Traefik labels on `licences.ultradepot.tech` and `api-licences.ultradepot.tech`
+- `docker-compose.dokploy.lan.yml`: Dokploy deployment for local/private DNS over HTTP
 
 ## What changed versus the old stack
 
@@ -106,6 +107,38 @@ Deploy with:
 ```bash
 docker compose -f docker-compose.dokploy.yml --env-file .env.docker up -d --build
 ```
+
+## Dokploy LAN deployment
+
+For private LAN domains such as `licences.ust.lan` and `api-licences.ust.lan`, use the LAN compose variant.
+
+Reason:
+
+- `.lan` domains do not get public Let's Encrypt certificates
+- Dokploy routing should therefore use the `web` entrypoint instead of `websecure`
+- Better Auth cookies must be downgraded from secure cookies for plain HTTP LAN testing
+
+Recommended env values:
+
+```env
+APP_DOMAIN=licences.ust.lan
+API_DOMAIN=api-licences.ust.lan
+PUBLIC_URL=http://licences.ust.lan
+BETTER_AUTH_SECURE_COOKIES=false
+```
+
+Deploy with:
+
+```bash
+docker compose -f docker-compose.dokploy.lan.yml --env-file test/.env.dokploy.lan up -d --build
+```
+
+Routing model:
+
+- `licences.ust.lan` -> `web` service on port `80`
+- `api-licences.ust.lan` -> `server` service on port `3000`
+
+This mirrors how Dokploy examples usually expose separate frontend and backend routers.
 
 ## Operational notes
 

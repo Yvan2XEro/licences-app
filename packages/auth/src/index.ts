@@ -10,16 +10,25 @@ export const auth = betterAuth({
 
     schema: schema,
   }),
-  trustedOrigins: [env.CORS_ORIGIN],
-  emailAndPassword: {
-    enabled: true,
-  },
-  advanced: {
-    defaultCookieAttributes: {
-      sameSite: "none",
-      secure: true,
-      httpOnly: true,
-    },
-  },
-  plugins: [],
+  // Local LAN Dokploy deployments may run over plain HTTP.
+  // Keep secure cookies by default, but allow an explicit override.
+  ...(function () {
+    const secureCookies =
+      env.BETTER_AUTH_SECURE_COOKIES ?? env.BETTER_AUTH_URL.startsWith("https://");
+
+    return {
+      trustedOrigins: [env.CORS_ORIGIN],
+      emailAndPassword: {
+        enabled: true,
+      },
+      advanced: {
+        defaultCookieAttributes: {
+          sameSite: secureCookies ? "none" : "lax",
+          secure: secureCookies,
+          httpOnly: true,
+        },
+      },
+      plugins: [],
+    };
+  })(),
 });
