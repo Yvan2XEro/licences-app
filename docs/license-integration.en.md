@@ -1,36 +1,48 @@
-# License Manager Integration Guide (EN)
+# License Integration Guide
 
-This document explains how to integrate the licence manager from this repo into mobile, desktop, and web apps. It is based on the current project implementation and should be kept alongside the codebase.
+This guide explains how to integrate the current license system exposed by this repository into web, mobile, and desktop clients.
 
-## 1) What you integrate
+For Tauri specifically, use `docs/license-integration-tauri.en.md` as the primary implementation guide. It goes deeper into the Rust boundary, local persistence, offline verification, and app gating.
 
-The public license API is exposed via oRPC procedures:
+## Integration summary
+
+The public license contract is exposed through oRPC procedures:
+
 - `licenses.activate`
 - `licenses.validate`
 - `licenses.deactivate`
 - `licenses.publicKey`
 
-These are served by the Hono API in `apps/server` and share a common JSON schema.
+These procedures are served by the Hono API in `apps/server` and implemented in `packages/api/src/license-service.ts`.
 
-## 2) Base URL and endpoints
+## Base URL
 
 - RPC endpoint: `POST {SERVER_URL}/rpc`
-- OpenAPI reference (schema browser): `{SERVER_URL}/api-reference`
+- OpenAPI reference: `{SERVER_URL}/api-reference`
 
-Where `SERVER_URL` is the API host (e.g. `http://localhost:3000` in dev).
+In development, `SERVER_URL` is usually `http://localhost:3000`.
 
-### Request shape (all three actions)
+## Request payload
+
+All public license procedures use the same input shape:
 
 ```json
 {
-  "licenseKey": "LIC-AB12-CD34-EF56",
+  "licenseKey": "LIC-ABCDE-FGHIJ-KLMNO-PQRST-UVWXY-Z",
   "productSlug": "my-product",
-  "machineId": "HASHED_DEVICE_FINGERPRINT",
+  "machineId": "hashed-machine-fingerprint",
   "installationId": "stable-installation-id"
 }
 ```
 
-### Success response shape (activate / validate)
+Notes:
+
+- `machineId` is required and must remain stable for the same machine.
+- `installationId` is optional at the API level, but you should treat it as required in real clients. It improves token traceability and offline state management.
+
+## Success response
+
+`activate` and `validate` return:
 
 ```json
 {
@@ -43,7 +55,7 @@ Where `SERVER_URL` is the API host (e.g. `http://localhost:3000` in dev).
     "productSlug": "my-product"
   },
   "machine": {
-    "fingerprint": "HASHED_DEVICE_FINGERPRINT",
+    "fingerprint": "hashed-machine-fingerprint",
     "revokedAt": null
   },
   "token": "<signed-token>",
@@ -51,22 +63,22 @@ Where `SERVER_URL` is the API host (e.g. `http://localhost:3000` in dev).
 }
 ```
 
-### Failure response shape
+`deactivate` returns the same top-level contract but without a new token.
+
+## Failure response
 
 ```json
 {
   "ok": false,
   "error": {
     "code": "LICENSE_NOT_FOUND",
-    "message": "License not found.",
-    "details": {
-      "any": "optional"
-    }
+    "message": "License not found."
   }
 }
 ```
 
-Error codes you should handle:
+Handle these error codes explicitly:
+
 - `LICENSE_NOT_FOUND`
 - `PRODUCT_MISMATCH`
 - `LICENSE_REVOKED`
@@ -76,86 +88,176 @@ Error codes you should handle:
 - `MACHINE_NOT_FOUND`
 - `RATE_LIMITED`
 
-## 3) Machine fingerprint (machineId)
+## Public key endpoint
 
-The API expects a stable, per-device identifier (preferably hashed) so it can enforce activation limits.
+Clients that verify offline tokens locally should call `licenses.publicKey`.
 
-Recommended strategy (cross-platform):
-1) Derive or generate a device ID.
-2) Hash it (SHA-256 or similar) before sending.
-3) Persist it locally so it stays stable across sessions.
+Response shape:
 
-Platform hints:
-- Web: generate a random UUID once and store it in `localStorage` or `IndexedDB`, then hash it.
-- Mobile: use the platform’s stable device identifier if available, otherwise generate and persist one.
-- Desktop: use a stable machine identifier (OS or app install ID) and hash it.
+```json
+{
+  "algorithm": "Ed25519",
+  "publicKey": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+}
+```
 
-## 4) Activation flow (first run)
+## Token model
 
-1) Collect `licenseKey`, `productSlug`, and `machineId`.
-2) Call `licenses.activate`.
-3) On success, store:
+On successful `activate` or `validate`, the server issues an Ed25519-signed token. The verified payload contains:
+
+- `version`
+- `iss`
+- `aud`
+- `sub`
+- `jti`
+- `licenseId`
+- `productSlug`
+- `machineFingerprint`
+- `installationId`
+- `licenseExpiresAt`
+- `offlineUntil`
+- `issuedAt`
+
+This token is the basis for limited offline access.
+
+## Recommended client-side flow
+
+### 1. Provisioning
+
+Before activation, create in the admin dashboard:
+
+1. a Product
+2. a Customer
+3. a License linked to both
+
+You will distribute:
+
+- the `licenseKey`
+- the expected `productSlug`
+
+### 2. Activation
+
+On first run:
+
+1. derive or load `machineId`
+2. derive or load `installationId`
+3. call `licenses.activate`
+4. store:
    - `licenseKey`
+   - `productSlug`
    - `machineId`
-   - `token` + `tokenExpiresAt`
-4) Use the returned `token` to allow offline grace (see below).
+   - `installationId`
+   - `token`
+   - `tokenExpiresAt`
+   - last successful validation timestamp
 
-## 5) Validation flow (app start / heartbeat)
+### 3. Startup validation
 
-Call `licenses.validate`:
-- on app start
-- periodically (e.g. daily) while the app is running
+On every app launch:
 
-If successful, update the stored `token` + `tokenExpiresAt` with the new values.
+1. load local license state
+2. if a cached token exists, verify it locally
+3. if the token is still valid and `offlineUntil` is in the future, allow startup
+4. if the token is missing or stale, call `licenses.validate`
 
-## 6) Deactivation flow (user action)
+### 4. Periodic refresh
 
-Call `licenses.deactivate` when a user explicitly wants to free a seat on the current device. This will revoke the machine slot and allow activation on another device.
+Refresh the online validation:
 
-## 7) Offline grace tokens
+- at app startup
+- when connectivity returns
+- on a timer, typically every 12 to 24 hours
+- before sensitive sync/export actions if the app has been offline for a while
 
-The API returns a signed token on `activate` and `validate`.
-- The token payload includes `offlineUntil`, `jti`, and `installationId`.
-- The server signs it with an Ed25519 private key.
+### 5. Deactivation
 
-Suggested client behavior:
-- Fetch the public key using `licenses.publicKey` and verify the token locally in desktop/mobile clients.
-- If you cannot safely persist the verification context, treat the token as an opaque cached record and refresh it when `offlineUntil` expires.
+When the user wants to free the seat on the current device:
 
-## 8) Rate limiting & retries
+1. call `licenses.deactivate`
+2. remove locally cached license state
+3. return the app to the activation screen
 
-The API enforces IP-based rate limits using:
+## Platform recommendations
+
+### Web
+
+- generate a stable app installation id and persist it in `localStorage` or `IndexedDB`
+- use a generated machine id rather than trying to fingerprint the browser aggressively
+- do not rely on offline verification as a hard security boundary
+
+### Mobile
+
+- store the local license state in secure storage if available
+- keep `installationId` stable across app restarts
+- use local token verification only as an offline grace mechanism
+
+### Desktop
+
+- perform the license boundary in native code when possible
+- store secrets and cached state in OS-protected storage
+- verify the Ed25519 token locally
+
+For Tauri, see `docs/license-integration-tauri.en.md`.
+
+## Rate limiting and retry behavior
+
+The public API applies IP-based rate limiting using:
+
 - `RATE_LIMIT_WINDOW_MS`
 - `RATE_LIMIT_MAX`
 
-If you receive `RATE_LIMITED`, back off and retry later (exponential backoff recommended).
+If you receive `RATE_LIMITED`:
 
-## 9) Admin setup (one-time)
+- stop retry storms
+- apply exponential backoff
+- show a user-facing error rather than spinning forever
 
-To issue licenses you must create a Product, Customer, and License in the admin dashboard:
-1) Set `ADMIN_ALLOWLIST` with your admin email(s).
-2) Sign in to the web app at `http://localhost:3001` (dev).
-3) Create a Product (note the `slug`).
-4) Create a Customer.
-5) Create a License for that product + customer.
-6) Distribute the license key to your user.
+## Machine identity guidance
 
-## 10) Minimal client example (TypeScript)
+The current API trusts the client-supplied `machineId`. That means the client should send a stable hash, not raw host identifiers.
 
-This repo already wires an oRPC client for the web app. A similar client can be used in any JS-capable runtime (web, desktop, mobile).
+Recommended pattern:
+
+1. collect a stable machine signal or generate a durable device id
+2. normalize it
+3. hash it with SHA-256 before sending
+4. persist it locally so it does not drift across sessions
+
+## Security boundaries
+
+The current system is solid for controlled clients, but the trust model is still server-centered:
+
+- the license key is user-facing
+- the server decides whether a machine may activate
+- the offline token is signed server-side and verified client-side
+- the client must still protect local state from tampering
+
+For desktop apps, enforce licensing in the native layer, not only in the UI.
+
+## Minimal TypeScript example
 
 ```ts
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 
-const link = new RPCLink({ url: `${SERVER_URL}/rpc` });
+const link = new RPCLink({
+  url: `${SERVER_URL}/rpc`,
+  fetch(url, options) {
+    return fetch(url, {
+      ...options,
+      credentials: "include",
+    });
+  },
+});
+
 const client = createORPCClient(link);
 
 const result = await client.licenses.activate({
-  licenseKey: "LIC-AB12-CD34-EF56",
+  licenseKey: "LIC-ABCDE-FGHIJ-KLMNO-PQRST-UVWXY-Z",
   productSlug: "my-product",
-  machineId: "HASHED_DEVICE_FINGERPRINT",
+  machineId: "hashed-machine-fingerprint",
+  installationId: "stable-installation-id",
 });
 ```
 
-If you are not using the oRPC client, consult the OpenAPI reference at `/api-reference` for the exact HTTP payload shape.
+If you are not using oRPC directly, inspect `/api-reference` for the generated contract.

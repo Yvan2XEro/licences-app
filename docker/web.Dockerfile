@@ -1,4 +1,4 @@
-FROM oven/bun:1 AS builder
+FROM oven/bun:1.3.10 AS builder
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ COPY packages/config/package.json packages/config/package.json
 COPY packages/db/package.json packages/db/package.json
 COPY packages/env/package.json packages/env/package.json
 
-RUN bun install --frozen-lockfile
+RUN bun install --frozen-lockfile --force --no-cache
 
 COPY . .
 

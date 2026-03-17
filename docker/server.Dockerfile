@@ -1,4 +1,4 @@
-FROM oven/bun:1 AS deps
+FROM oven/bun:1.3.10 AS deps
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ COPY packages/config/package.json packages/config/package.json
 COPY packages/db/package.json packages/db/package.json
 COPY packages/env/package.json packages/env/package.json
 
-RUN bun install --frozen-lockfile
+RUN bun install --frozen-lockfile --force --no-cache
 
 FROM deps AS builder
 
@@ -25,7 +25,7 @@ COPY . .
 
 CMD ["bun", "run", "--cwd", "packages/db", "db:migrate"]
 
-FROM oven/bun:1 AS runtime
+FROM oven/bun:1.3.10 AS runtime
 
 WORKDIR /app
 
@@ -41,7 +41,7 @@ COPY packages/config/package.json packages/config/package.json
 COPY packages/db/package.json packages/db/package.json
 COPY packages/env/package.json packages/env/package.json
 
-RUN bun install --frozen-lockfile --production
+RUN bun install --frozen-lockfile --production --force --no-cache
 
 COPY --from=builder /app/apps/server/dist /app/apps/server/dist
 
