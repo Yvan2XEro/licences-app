@@ -40,6 +40,7 @@ This repository now has two production-oriented Docker stacks:
 - `docker/server.Dockerfile`
 - `docker/web.Dockerfile`
 - `docker/Caddyfile`
+- `docker/Caddyfile.dokploy`
 - `.env.docker.example`
 - `packages/db/src/migrations/*`
 
@@ -83,6 +84,8 @@ Flow:
 3. `server` starts only if migration succeeded
 4. `web` starts only if the API is healthy
 
+In this mode, Caddy is the public edge and terminates TLS itself.
+
 ## Dokploy deployment
 
 Dokploy officially recommends configuring domains from the UI, but it also supports Docker Compose labels when you need infrastructure-as-code routing rules.
@@ -102,6 +105,8 @@ PUBLIC_URL=https://licences.ultradepot.tech
 
 The `web` service joins an external `dokploy-network`, which must exist in the Dokploy host environment.
 
+In Dokploy mode, Traefik is the public edge. The internal Caddy container only serves static files and proxies app API routes to `server`. It does not manage domains or TLS.
+
 Deploy with:
 
 ```bash
@@ -117,6 +122,7 @@ Reason:
 - `.lan` domains do not get public Let's Encrypt certificates
 - Dokploy routing should therefore use the `web` entrypoint instead of `websecure`
 - Better Auth cookies must be downgraded from secure cookies for plain HTTP LAN testing
+- the internal Caddy container must not try to obtain certificates behind Traefik
 
 Recommended env values:
 

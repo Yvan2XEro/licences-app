@@ -91,6 +91,7 @@ services:
       dockerfile: docker/web.Dockerfile
       args:
         VITE_SERVER_URL: ${PUBLIC_URL}
+        CADDY_MODE: dokploy
         APP_DOMAIN: ${APP_DOMAIN}
     init: true
     restart: unless-stopped

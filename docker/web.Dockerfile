@@ -23,15 +23,18 @@ RUN bun run --cwd apps/web build
 
 FROM caddy:2-alpine
 
+ARG CADDY_MODE=direct
 ARG APP_DOMAIN
 ENV APP_DOMAIN=${APP_DOMAIN}
 ENV API_DOMAIN=
 ENV ACME_EMAIL=
 
-COPY docker/Caddyfile /etc/caddy/Caddyfile
+COPY docker/Caddyfile /tmp/Caddyfile.direct
+COPY docker/Caddyfile.dokploy /tmp/Caddyfile.dokploy
+RUN if [ "$CADDY_MODE" = "dokploy" ]; then cp /tmp/Caddyfile.dokploy /etc/caddy/Caddyfile; else cp /tmp/Caddyfile.direct /etc/caddy/Caddyfile; fi
 COPY --from=builder /app/apps/web/dist /usr/share/caddy
 
 EXPOSE 80
 EXPOSE 443
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=5 CMD wget -q --header="Host: ${APP_DOMAIN}" -O - http://127.0.0.1/healthz >/dev/null 2>&1 || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=5 CMD wget -q -O - http://127.0.0.1/healthz >/dev/null 2>&1 || exit 1

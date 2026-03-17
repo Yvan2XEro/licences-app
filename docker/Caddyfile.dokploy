@@ -1,0 +1,30 @@
+{
+	admin off
+	auto_https off
+}
+
+:80 {
+	encode zstd gzip
+
+	handle /healthz {
+		respond "ok" 200
+	}
+
+	handle /rpc* {
+		reverse_proxy server:3000
+	}
+
+	handle /api/auth/* {
+		reverse_proxy server:3000
+	}
+
+	handle /api-reference* {
+		reverse_proxy server:3000
+	}
+
+	handle {
+		root * /usr/share/caddy
+		try_files {path} /index.html
+		file_server
+	}
+}
