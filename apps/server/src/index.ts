@@ -13,70 +13,106 @@ import { logger } from "hono/logger";
 
 const app = new Hono();
 
+function readHeader(headers: any, name: string) {
+	if (!headers) {
+		return undefined;
+	}
+
+	if (typeof headers.get === "function") {
+		return headers.get(name) ?? headers.get(name.toLowerCase()) ?? undefined;
+	}
+
+	const value = headers[name] ?? headers[name.toLowerCase()];
+	if (Array.isArray(value)) {
+		return value[0];
+	}
+
+	return typeof value === "string" ? value : undefined;
+}
+
+function getExternalBaseUrl(request: { url: string | URL; headers: any }) {
+	const requestUrl = request.url instanceof URL ? request.url : new URL(request.url);
+	const forwardedProto =
+		readHeader(request.headers, "x-forwarded-proto") ?? requestUrl.protocol.replace(":", "");
+	const forwardedHost =
+		readHeader(request.headers, "x-forwarded-host") ??
+		readHeader(request.headers, "host") ??
+		requestUrl.host;
+
+	return `${forwardedProto}://${forwardedHost}`;
+}
+
 app.use(logger());
 app.use(
-  "/*",
-  cors({
-    origin: env.CORS_ORIGIN,
-    allowMethods: ["GET", "POST", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-  }),
+	"/*",
+	cors({
+		origin: env.CORS_ORIGIN.split(",").map((e) => e.trim()),
+		allowMethods: ["GET", "POST", "OPTIONS"],
+		allowHeaders: ["Content-Type", "Authorization"],
+		credentials: true,
+	}),
 );
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
 export const apiHandler = new OpenAPIHandler(appRouter, {
-  plugins: [
-    new OpenAPIReferencePlugin({
-      schemaConverters: [new ZodToJsonSchemaConverter()],
-    }),
-  ],
-  interceptors: [
-    onError((error) => {
-      console.error(error);
-    }),
-  ],
+	plugins: [
+		new OpenAPIReferencePlugin({
+			schemaConverters: [new ZodToJsonSchemaConverter()],
+			specGenerateOptions: ({ request }) => ({
+				servers: [
+					{
+						url: getExternalBaseUrl(request),
+					},
+				],
+			}),
+		}),
+	],
+	interceptors: [
+		onError((error) => {
+			console.error(error);
+		}),
+	],
 });
 
 export const rpcHandler = new RPCHandler(appRouter, {
-  interceptors: [
-    onError((error) => {
-      console.error(error);
-    }),
-  ],
+	interceptors: [
+		onError((error) => {
+			console.error(error);
+		}),
+	],
 });
 
 app.use("/*", async (c, next) => {
-  const context = await createContext({ context: c });
+	const context = await createContext({ context: c });
 
-  const rpcResult = await rpcHandler.handle(c.req.raw, {
-    prefix: "/rpc",
-    context: context,
-  });
+	const rpcResult = await rpcHandler.handle(c.req.raw, {
+		prefix: "/rpc",
+		context: context,
+	});
 
-  if (rpcResult.matched) {
-    return c.newResponse(rpcResult.response.body, rpcResult.response);
-  }
+	if (rpcResult.matched) {
+		return c.newResponse(rpcResult.response.body, rpcResult.response);
+	}
 
-  const apiResult = await apiHandler.handle(c.req.raw, {
-    prefix: "/api-reference",
-    context: context,
-  });
+	const apiResult = await apiHandler.handle(c.req.raw, {
+		prefix: "/api-reference",
+		context: context,
+	});
 
-  if (apiResult.matched) {
-    return c.newResponse(apiResult.response.body, apiResult.response);
-  }
+	if (apiResult.matched) {
+		return c.newResponse(apiResult.response.body, apiResult.response);
+	}
 
-  await next();
+	await next();
 });
 
 app.get("/", (c) => {
-  return c.text("OK");
+	return c.text("OK");
 });
 
 app.get("/healthz", (c) => {
-  return c.json({ status: "ok" });
+	return c.json({ status: "ok" });
 });
 
 export default app;
