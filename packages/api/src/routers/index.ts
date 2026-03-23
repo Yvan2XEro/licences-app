@@ -110,48 +110,42 @@ export const appRouter = {
 			algorithm: "Ed25519",
 			publicKey: getLicenseTokenPublicKeyPem(),
 		})),
-		activate: publicProcedure
-			.input(licenseInputSchema)
-			.handler(async ({ input, context }) => {
-				return activateLicense({
-					licenseKey: input.licenseKey,
-					productSlug: input.productSlug,
-					machineId: input.machineId,
-					installationId: input.installationId ?? null,
-					meta: {
-						ip: context.ip,
-						userAgent: context.userAgent ?? null,
-					},
-				});
-			}),
-		validate: publicProcedure
-			.input(licenseInputSchema)
-			.handler(async ({ input, context }) => {
-				return validateLicense({
-					licenseKey: input.licenseKey,
-					productSlug: input.productSlug,
-					machineId: input.machineId,
-					installationId: input.installationId ?? null,
-					meta: {
-						ip: context.ip,
-						userAgent: context.userAgent ?? null,
-					},
-				});
-			}),
-		deactivate: publicProcedure
-			.input(licenseInputSchema)
-			.handler(async ({ input, context }) => {
-				return deactivateLicense({
-					licenseKey: input.licenseKey,
-					productSlug: input.productSlug,
-					machineId: input.machineId,
-					installationId: input.installationId ?? null,
-					meta: {
-						ip: context.ip,
-						userAgent: context.userAgent ?? null,
-					},
-				});
-			}),
+		activate: publicProcedure.input(licenseInputSchema).handler(async ({ input, context }) => {
+			return activateLicense({
+				licenseKey: input.licenseKey,
+				productSlug: input.productSlug,
+				machineId: input.machineId,
+				installationId: input.installationId ?? null,
+				meta: {
+					ip: context.ip,
+					userAgent: context.userAgent ?? null,
+				},
+			});
+		}),
+		validate: publicProcedure.input(licenseInputSchema).handler(async ({ input, context }) => {
+			return validateLicense({
+				licenseKey: input.licenseKey,
+				productSlug: input.productSlug,
+				machineId: input.machineId,
+				installationId: input.installationId ?? null,
+				meta: {
+					ip: context.ip,
+					userAgent: context.userAgent ?? null,
+				},
+			});
+		}),
+		deactivate: publicProcedure.input(licenseInputSchema).handler(async ({ input, context }) => {
+			return deactivateLicense({
+				licenseKey: input.licenseKey,
+				productSlug: input.productSlug,
+				machineId: input.machineId,
+				installationId: input.installationId ?? null,
+				meta: {
+					ip: context.ip,
+					userAgent: context.userAgent ?? null,
+				},
+			});
+		}),
 	},
 	admin: {
 		me: adminProcedure.handler(({ context }) => {

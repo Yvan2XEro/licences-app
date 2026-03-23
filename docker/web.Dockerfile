@@ -21,20 +21,14 @@ ENV VITE_SERVER_URL=${VITE_SERVER_URL}
 
 RUN bun run --cwd apps/web build
 
-FROM caddy:2-alpine
+FROM node:20-alpine
 
-ARG CADDY_MODE=direct
-ARG APP_DOMAIN
-ENV APP_DOMAIN=${APP_DOMAIN}
-ENV API_DOMAIN=
-ENV ACME_EMAIL=
+RUN npm install -g serve && apk add --no-cache wget
 
-COPY docker/Caddyfile /tmp/Caddyfile.direct
-COPY docker/Caddyfile.dokploy /tmp/Caddyfile.dokploy
-RUN if [ "$CADDY_MODE" = "dokploy" ]; then cp /tmp/Caddyfile.dokploy /etc/caddy/Caddyfile; else cp /tmp/Caddyfile.direct /etc/caddy/Caddyfile; fi
-COPY --from=builder /app/apps/web/dist /usr/share/caddy
+COPY --from=builder /app/apps/web/dist /app
 
 EXPOSE 80
-EXPOSE 443
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=5 CMD wget -q -O - http://127.0.0.1/healthz >/dev/null 2>&1 || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=5 CMD wget -q -O - http://127.0.0.1/ >/dev/null 2>&1 || exit 1
+
+CMD ["serve", "-s", "/app", "-l", "80"]

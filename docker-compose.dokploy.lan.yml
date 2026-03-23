@@ -87,18 +87,12 @@ services:
       context: .
       dockerfile: docker/web.Dockerfile
       args:
-        VITE_SERVER_URL: ${PUBLIC_URL}
-        CADDY_MODE: dokploy
-        APP_DOMAIN: ${APP_DOMAIN}
+        VITE_SERVER_URL: ${API_URL}
     init: true
     restart: unless-stopped
     depends_on:
       server:
         condition: service_healthy
-    environment:
-      APP_DOMAIN: ${APP_DOMAIN}
-      API_DOMAIN: ${API_DOMAIN}
-      ACME_EMAIL: ${ACME_EMAIL}
     networks:
       - dokploy-network
     security_opt:
