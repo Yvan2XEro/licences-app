@@ -13,6 +13,35 @@ import { logger } from "hono/logger";
 
 const app = new Hono();
 
+function readHeader(headers: any, name: string) {
+	if (!headers) {
+		return undefined;
+	}
+
+	if (typeof headers.get === "function") {
+		return headers.get(name) ?? headers.get(name.toLowerCase()) ?? undefined;
+	}
+
+	const value = headers[name] ?? headers[name.toLowerCase()];
+	if (Array.isArray(value)) {
+		return value[0];
+	}
+
+	return typeof value === "string" ? value : undefined;
+}
+
+function getExternalBaseUrl(request: { url: string | URL; headers: any }) {
+	const requestUrl = request.url instanceof URL ? request.url : new URL(request.url);
+	const forwardedProto =
+		readHeader(request.headers, "x-forwarded-proto") ?? requestUrl.protocol.replace(":", "");
+	const forwardedHost =
+		readHeader(request.headers, "x-forwarded-host") ??
+		readHeader(request.headers, "host") ??
+		requestUrl.host;
+
+	return `${forwardedProto}://${forwardedHost}`;
+}
+
 app.use(logger());
 app.use(
 	"/*",
@@ -30,6 +59,13 @@ export const apiHandler = new OpenAPIHandler(appRouter, {
 	plugins: [
 		new OpenAPIReferencePlugin({
 			schemaConverters: [new ZodToJsonSchemaConverter()],
+			specGenerateOptions: ({ request }) => ({
+				servers: [
+					{
+						url: getExternalBaseUrl(request),
+					},
+				],
+			}),
 		}),
 	],
 	interceptors: [
