@@ -67,7 +67,7 @@ services:
     tmpfs:
       - /tmp
     ports:
-      - "3000:3000"
+      - "${API_PORT:-3000}:3000"
     logging: *default-logging
 
   web:
@@ -82,7 +82,7 @@ services:
       server:
         condition: service_healthy
     ports:
-      - "80:80"
+      - "${WEB_PORT:-80}:80"
     security_opt:
       - no-new-privileges:true
     logging: *default-logging
