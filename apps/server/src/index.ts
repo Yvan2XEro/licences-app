@@ -62,7 +62,7 @@ export const apiHandler = new OpenAPIHandler(appRouter, {
 			specGenerateOptions: ({ request }) => ({
 				servers: [
 					{
-						url: getExternalBaseUrl(request),
+						url: `${getExternalBaseUrl(request)}/api-reference`,
 					},
 				],
 			}),
