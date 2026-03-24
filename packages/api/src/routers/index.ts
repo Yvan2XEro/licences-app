@@ -96,138 +96,175 @@ const licenseFilterSchema = listQuerySchema.extend({
 });
 
 export const appRouter = {
-	healthCheck: publicProcedure.handler(() => {
+	healthCheck: publicProcedure.route({ method: "GET", path: "/health" }).handler(() => {
 		return "OK";
 	}),
-	privateData: protectedProcedure.handler(({ context }) => {
+	privateData: protectedProcedure.route({ method: "GET", path: "/private-data" }).handler(({ context }) => {
 		return {
 			message: "This is private",
 			user: context.session?.user,
 		};
 	}),
 	licenses: {
-		publicKey: publicProcedure.handler(() => ({
+		publicKey: publicProcedure.route({ method: "GET", path: "/licenses/public-key" }).handler(() => ({
 			algorithm: "Ed25519",
 			publicKey: getLicenseTokenPublicKeyPem(),
 		})),
-		activate: publicProcedure.input(licenseInputSchema).handler(async ({ input, context }) => {
-			return activateLicense({
-				licenseKey: input.licenseKey,
-				productSlug: input.productSlug,
-				machineId: input.machineId,
-				installationId: input.installationId ?? null,
-				meta: {
-					ip: context.ip,
-					userAgent: context.userAgent ?? null,
-				},
-			});
-		}),
-		validate: publicProcedure.input(licenseInputSchema).handler(async ({ input, context }) => {
-			return validateLicense({
-				licenseKey: input.licenseKey,
-				productSlug: input.productSlug,
-				machineId: input.machineId,
-				installationId: input.installationId ?? null,
-				meta: {
-					ip: context.ip,
-					userAgent: context.userAgent ?? null,
-				},
-			});
-		}),
-		deactivate: publicProcedure.input(licenseInputSchema).handler(async ({ input, context }) => {
-			return deactivateLicense({
-				licenseKey: input.licenseKey,
-				productSlug: input.productSlug,
-				machineId: input.machineId,
-				installationId: input.installationId ?? null,
-				meta: {
-					ip: context.ip,
-					userAgent: context.userAgent ?? null,
-				},
-			});
-		}),
+		activate: publicProcedure
+			.route({ method: "POST", path: "/licenses/activate" })
+			.input(licenseInputSchema)
+			.handler(async ({ input, context }) => {
+				return activateLicense({
+					licenseKey: input.licenseKey,
+					productSlug: input.productSlug,
+					machineId: input.machineId,
+					installationId: input.installationId ?? null,
+					meta: {
+						ip: context.ip,
+						userAgent: context.userAgent ?? null,
+					},
+				});
+			}),
+		validate: publicProcedure
+			.route({ method: "POST", path: "/licenses/validate" })
+			.input(licenseInputSchema)
+			.handler(async ({ input, context }) => {
+				return validateLicense({
+					licenseKey: input.licenseKey,
+					productSlug: input.productSlug,
+					machineId: input.machineId,
+					installationId: input.installationId ?? null,
+					meta: {
+						ip: context.ip,
+						userAgent: context.userAgent ?? null,
+					},
+				});
+			}),
+		deactivate: publicProcedure
+			.route({ method: "POST", path: "/licenses/deactivate" })
+			.input(licenseInputSchema)
+			.handler(async ({ input, context }) => {
+				return deactivateLicense({
+					licenseKey: input.licenseKey,
+					productSlug: input.productSlug,
+					machineId: input.machineId,
+					installationId: input.installationId ?? null,
+					meta: {
+						ip: context.ip,
+						userAgent: context.userAgent ?? null,
+					},
+				});
+			}),
 	},
 	admin: {
-		me: adminProcedure.handler(({ context }) => {
+		me: adminProcedure.route({ method: "GET", path: "/admin/me" }).handler(({ context }) => {
 			return {
 				user: context.session?.user,
 			};
 		}),
 		dashboard: {
-			stats: adminProcedure.handler(() => getDashboardStats()),
+			stats: adminProcedure.route({ method: "GET", path: "/admin/dashboard/stats" }).handler(() => getDashboardStats()),
 		},
 		products: {
-			list: adminProcedure.input(listQuerySchemaOptional).handler(async ({ input }) => {
-				const query = input ?? {};
-				return listProducts({
-					search: query.search,
-					page: query.page ?? 1,
-					pageSize: query.pageSize ?? 10,
-				});
-			}),
-			create: adminProcedure.input(productSchema).handler(async ({ input }) => {
-				return createProduct(input);
-			}),
+			list: adminProcedure
+				.route({ method: "POST", path: "/admin/products/list" })
+				.input(listQuerySchemaOptional)
+				.handler(async ({ input }) => {
+					const query = input ?? {};
+					return listProducts({
+						search: query.search,
+						page: query.page ?? 1,
+						pageSize: query.pageSize ?? 10,
+					});
+				}),
+			create: adminProcedure
+				.route({ method: "POST", path: "/admin/products/create" })
+				.input(productSchema)
+				.handler(async ({ input }) => {
+					return createProduct(input);
+				}),
 			update: adminProcedure
+				.route({ method: "POST", path: "/admin/products/update" })
 				.input(productUpdateSchema)
 				.handler(async ({ input }) => updateProduct(input)),
 		},
 		customers: {
-			list: adminProcedure.input(listQuerySchemaOptional).handler(async ({ input }) => {
-				const query = input ?? {};
-				return listCustomers({
-					search: query.search,
-					page: query.page ?? 1,
-					pageSize: query.pageSize ?? 10,
-				});
-			}),
-			create: adminProcedure.input(customerSchema).handler(async ({ input }) => {
-				return createCustomer(input);
-			}),
+			list: adminProcedure
+				.route({ method: "POST", path: "/admin/customers/list" })
+				.input(listQuerySchemaOptional)
+				.handler(async ({ input }) => {
+					const query = input ?? {};
+					return listCustomers({
+						search: query.search,
+						page: query.page ?? 1,
+						pageSize: query.pageSize ?? 10,
+					});
+				}),
+			create: adminProcedure
+				.route({ method: "POST", path: "/admin/customers/create" })
+				.input(customerSchema)
+				.handler(async ({ input }) => {
+					return createCustomer(input);
+				}),
 			update: adminProcedure
+				.route({ method: "POST", path: "/admin/customers/update" })
 				.input(customerUpdateSchema)
 				.handler(async ({ input }) => updateCustomer(input)),
 		},
 		licenses: {
-			list: adminProcedure.input(licenseFilterSchema.optional()).handler(async ({ input }) => {
-				const query = input ?? {};
-				return listLicenses({
-					search: query.search,
-					page: query.page ?? 1,
-					pageSize: query.pageSize ?? 10,
-					status: query.status,
-					type: query.type,
-					expiringInDays: query.expiringInDays,
-					activationsReached: query.activationsReached,
-				});
-			}),
-			create: adminProcedure.input(licenseCreateSchema).handler(async ({ input }) => {
-				return createLicense({
-					productId: input.productId,
-					customerId: input.customerId,
-					type: input.type,
-					expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
-					maxActivations: input.maxActivations,
-					status: input.status,
-				});
-			}),
-			update: adminProcedure.input(licenseUpdateSchema).handler(async ({ input }) => {
-				return updateLicense({
-					id: input.id,
-					status: input.status,
-					expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
-					maxActivations: input.maxActivations,
-				});
-			}),
-			detail: adminProcedure.input(licenseIdSchema).handler(async ({ input }) => {
-				return getLicenseDetail(input.licenseId);
-			}),
+			list: adminProcedure
+				.route({ method: "POST", path: "/admin/licenses/list" })
+				.input(licenseFilterSchema.optional())
+				.handler(async ({ input }) => {
+					const query = input ?? {};
+					return listLicenses({
+						search: query.search,
+						page: query.page ?? 1,
+						pageSize: query.pageSize ?? 10,
+						status: query.status,
+						type: query.type,
+						expiringInDays: query.expiringInDays,
+						activationsReached: query.activationsReached,
+					});
+				}),
+			create: adminProcedure
+				.route({ method: "POST", path: "/admin/licenses/create" })
+				.input(licenseCreateSchema)
+				.handler(async ({ input }) => {
+					return createLicense({
+						productId: input.productId,
+						customerId: input.customerId,
+						type: input.type,
+						expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+						maxActivations: input.maxActivations,
+						status: input.status,
+					});
+				}),
+			update: adminProcedure
+				.route({ method: "POST", path: "/admin/licenses/update" })
+				.input(licenseUpdateSchema)
+				.handler(async ({ input }) => {
+					return updateLicense({
+						id: input.id,
+						status: input.status,
+						expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+						maxActivations: input.maxActivations,
+					});
+				}),
+			detail: adminProcedure
+				.route({ method: "POST", path: "/admin/licenses/detail" })
+				.input(licenseIdSchema)
+				.handler(async ({ input }) => {
+					return getLicenseDetail(input.licenseId);
+				}),
 		},
 		machines: {
 			revoke: adminProcedure
+				.route({ method: "POST", path: "/admin/machines/revoke" })
 				.input(machineRevokeSchema)
 				.handler(async ({ input }) => revokeMachine(input.machineId)),
 			restore: adminProcedure
+				.route({ method: "POST", path: "/admin/machines/restore" })
 				.input(machineRestoreSchema)
 				.handler(async ({ input }) => restoreMachine(input.machineId)),
 		},
