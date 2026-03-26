@@ -84,6 +84,8 @@ export async function listCustomers(input: {
 	const whereClause = search
 		? or(
 				ilike(customer.name, pattern),
+				sql`${customer.companySlug} ILIKE ${pattern}`,
+				sql`${customer.companyName} ILIKE ${pattern}`,
 				sql`${customer.email} ILIKE ${pattern}`,
 				sql`${customer.phone} ILIKE ${pattern}`,
 				sql`${customer.address} ILIKE ${pattern}`,
@@ -110,6 +112,8 @@ export async function listCustomers(input: {
 export async function createCustomer(input: {
 	name: string;
 	email?: string | null;
+	companySlug?: string | null;
+	companyName?: string | null;
 	phone?: string | null;
 	address?: string | null;
 }) {
@@ -118,6 +122,8 @@ export async function createCustomer(input: {
 		.values({
 			name: input.name,
 			email: input.email || null,
+			companySlug: input.companySlug || null,
+			companyName: input.companyName || null,
 			phone: input.phone || null,
 			address: input.address || null,
 		})
@@ -130,6 +136,8 @@ export async function updateCustomer(input: {
 	id: string;
 	name: string;
 	email?: string | null;
+	companySlug?: string | null;
+	companyName?: string | null;
 	phone?: string | null;
 	address?: string | null;
 }) {
@@ -138,6 +146,8 @@ export async function updateCustomer(input: {
 		.set({
 			name: input.name,
 			email: input.email || null,
+			companySlug: input.companySlug || null,
+			companyName: input.companyName || null,
 			phone: input.phone || null,
 			address: input.address || null,
 		})
@@ -168,6 +178,8 @@ export async function listLicenses(input: {
 				ilike(license.key, pattern),
 				ilike(product.name, pattern),
 				ilike(product.slug, pattern),
+				sql`${customer.companySlug} ILIKE ${pattern}`,
+				sql`${customer.companyName} ILIKE ${pattern}`,
 				sql`${customer.email} ILIKE ${pattern}`,
 				sql`${customer.phone} ILIKE ${pattern}`,
 				ilike(customer.name, pattern),
@@ -204,6 +216,8 @@ export async function listLicenses(input: {
 			productName: product.name,
 			customerEmail: customer.email,
 			customerName: customer.name,
+			customerCompanySlug: customer.companySlug,
+			customerCompanyName: customer.companyName,
 			customerPhone: customer.phone,
 		})
 		.from(license)

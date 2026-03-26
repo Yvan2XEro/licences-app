@@ -177,6 +177,14 @@ function RouteComponent() {
 							{customer.email ?? "—"}
 						</div>
 						<div>
+							<strong className="text-foreground">Company:</strong>{" "}
+							{customer.companyName ?? "—"}
+						</div>
+						<div>
+							<strong className="text-foreground">Company slug:</strong>{" "}
+							{customer.companySlug ?? "—"}
+						</div>
+						<div>
 							<strong className="text-foreground">Phone:</strong>{" "}
 							{customer.phone ?? "—"}
 						</div>

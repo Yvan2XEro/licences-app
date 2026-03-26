@@ -44,6 +44,8 @@ const productUpdateSchema = productSchema.extend({
 const customerSchema = z.object({
 	name: z.string().min(1),
 	email: z.string().email().optional().or(z.literal("")).nullable(),
+	companySlug: z.string().optional().or(z.literal("")).nullable(),
+	companyName: z.string().optional().or(z.literal("")).nullable(),
 	phone: z.string().optional().or(z.literal("")).nullable(),
 	address: z.string().optional().or(z.literal("")).nullable(),
 });

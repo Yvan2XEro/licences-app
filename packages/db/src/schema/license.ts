@@ -43,6 +43,8 @@ export const customer = pgTable("customer", {
 	id: uuid("id").defaultRandom().primaryKey(),
 	email: text("email").unique(),
 	name: text("name").notNull(),
+	companySlug: text("company_slug"),
+	companyName: text("company_name"),
 	phone: text("phone"),
 	address: text("address"),
 	createdAt: timestamp("created_at").defaultNow().notNull(),

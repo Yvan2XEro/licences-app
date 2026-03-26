@@ -31,6 +31,8 @@ type CustomerRow = {
 	id: string;
 	name: string;
 	email: string | null;
+	companySlug: string | null;
+	companyName: string | null;
 	phone: string | null;
 	address: string | null;
 };
@@ -82,6 +84,24 @@ function RouteComponent() {
 					) : (
 						"—"
 					),
+			},
+			{
+				header: "Company",
+				accessorFn: (row) => row.companyName ?? row.companySlug ?? "",
+				cell: ({ row }) => {
+					const { companyName, companySlug } = row.original;
+					if (!companyName && !companySlug) {
+						return "—";
+					}
+					return (
+						<div className="space-y-1">
+							<div>{companyName ?? "—"}</div>
+							{companySlug && (
+								<div className="text-xs text-muted-foreground">{companySlug}</div>
+							)}
+						</div>
+					);
+				},
 			},
 			{
 				header: "Phone",
@@ -266,6 +286,8 @@ function CustomerSheet({
 		defaultValues: {
 			name: initialValues?.name ?? "",
 			email: initialValues?.email ?? "",
+			companySlug: initialValues?.companySlug ?? "",
+			companyName: initialValues?.companyName ?? "",
 			phone: initialValues?.phone ?? "",
 			address: initialValues?.address ?? "",
 		},
@@ -273,6 +295,8 @@ function CustomerSheet({
 				onSubmit: z.object({
 					name: z.string().min(1),
 					email: z.union([z.string().email(), z.literal("")]),
+					companySlug: z.string(),
+					companyName: z.string(),
 					phone: z.string(),
 					address: z.string(),
 				}),
@@ -282,6 +306,8 @@ function CustomerSheet({
 				const payload = {
 					name: value.name,
 					email: value.email || null,
+					companySlug: value.companySlug || null,
+					companyName: value.companyName || null,
 					phone: value.phone || null,
 					address: value.address || null,
 				};
@@ -340,6 +366,32 @@ function CustomerSheet({
 								<Input
 									id={`${mode}-email`}
 									type="email"
+									value={field.state.value}
+									onBlur={field.handleBlur}
+									onChange={(event) => field.handleChange(event.target.value)}
+								/>
+							</div>
+						)}
+					</form.Field>
+					<form.Field name="companyName">
+						{(field) => (
+							<div className="space-y-2">
+								<Label htmlFor={`${mode}-company-name`}>Company name (optional)</Label>
+								<Input
+									id={`${mode}-company-name`}
+									value={field.state.value}
+									onBlur={field.handleBlur}
+									onChange={(event) => field.handleChange(event.target.value)}
+								/>
+							</div>
+						)}
+					</form.Field>
+					<form.Field name="companySlug">
+						{(field) => (
+							<div className="space-y-2">
+								<Label htmlFor={`${mode}-company-slug`}>Company slug (optional)</Label>
+								<Input
+									id={`${mode}-company-slug`}
 									value={field.state.value}
 									onBlur={field.handleBlur}
 									onChange={(event) => field.handleChange(event.target.value)}

@@ -50,6 +50,8 @@ type LicenseRow = {
 	productName: string;
 	customerEmail: string | null;
 	customerName: string;
+	customerCompanySlug: string | null;
+	customerCompanyName: string | null;
 	customerPhone: string | null;
 };
 
@@ -155,6 +157,14 @@ function RouteComponent() {
 				cell: ({ row }) => (
 					<div className="space-y-1">
 						<div className="text-sm font-medium">{row.original.customerName}</div>
+						{(row.original.customerCompanyName || row.original.customerCompanySlug) && (
+							<div className="text-xs text-muted-foreground">
+								{row.original.customerCompanyName ?? "—"}
+								{row.original.customerCompanySlug
+									? ` • ${row.original.customerCompanySlug}`
+									: ""}
+							</div>
+						)}
 						{row.original.customerEmail && (
 							<ClipboardCopy value={row.original.customerEmail} label="email" />
 						)}
@@ -397,7 +407,13 @@ function LicenseSheet({
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	products: { id: string; name: string }[];
-	customers: { id: string; email: string | null; name: string }[];
+	customers: {
+		id: string;
+		email: string | null;
+		name: string;
+		companySlug: string | null;
+		companyName: string | null;
+	}[];
 	initialValues?: LicenseRow;
 }) {
 	const createMutation = useMutation({
@@ -423,7 +439,8 @@ function LicenseSheet({
 	}));
 	const customerOptions = customers.map((item) => ({
 		value: item.id,
-		label: item.email ?? item.name,
+		label: item.companyName ?? item.name,
+		description: [item.companySlug, item.email].filter(Boolean).join(" • "),
 	}));
 	const defaultValues: LicenseFormValues = {
 		productId: "",
@@ -572,7 +589,14 @@ function LicenseSheet({
 													<ComboboxCollection>
 														{(item) => (
 															<ComboboxItem key={item.value} value={item}>
-																{item.label}
+																<div className="flex flex-col">
+																	<span>{item.label}</span>
+																	{item.description && (
+																		<span className="text-xs text-muted-foreground">
+																			{item.description}
+																		</span>
+																	)}
+																</div>
 															</ComboboxItem>
 														)}
 													</ComboboxCollection>

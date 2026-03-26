@@ -49,12 +49,16 @@ async function resetTables() {
 
 async function seedLicense({
 	productSlug = "product-1",
+	companySlug = "company-1",
+	companyName = "Company 1",
 	defaultMaxActivations = 1,
 	licenseStatus = "active",
 	maxActivations = null,
 	expiresAt = null,
 }: {
 	productSlug?: string;
+	companySlug?: string | null;
+	companyName?: string | null;
 	defaultMaxActivations?: number;
 	licenseStatus?: "active" | "suspended" | "expired" | "revoked";
 	maxActivations?: number | null;
@@ -74,6 +78,8 @@ async function seedLicense({
 		.values({
 			email: `${productSlug}@example.com`,
 			name: "Test Customer",
+			companySlug,
+			companyName,
 		})
 		.returning();
 	if (!createdProduct || !createdCustomer) {
@@ -325,6 +331,7 @@ describe("license tokens", () => {
 		expect(payload.aud).toBe("licences-app-client");
 		expect(payload.sub).toBe(payload.licenseId);
 		expect(payload.installationId).toBe("install-1");
+		expect(payload.companySlug).toBe("company-1");
 		expect(payload.jti.length).toBeGreaterThan(10);
 		const issuedAt = new Date(payload.issuedAt).getTime();
 		const offlineUntil = new Date(payload.offlineUntil).getTime();

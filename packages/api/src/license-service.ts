@@ -12,6 +12,7 @@ import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { env } from "@licences-app/env/server";
 import {
 	activationLog,
+	customer,
 	license,
 	machine,
 	product,
@@ -65,6 +66,7 @@ type LicenseLookup = {
 	license: typeof license.$inferSelect;
 	productSlug: string;
 	defaultMaxActivations: number;
+	customerCompanySlug: string | null;
 };
 
 export type LicenseTokenPayload = {
@@ -75,6 +77,7 @@ export type LicenseTokenPayload = {
 	jti: string;
 	licenseId: string;
 	productSlug: string;
+	companySlug: string | null;
 	machineFingerprint: string;
 	installationId: string | null;
 	licenseExpiresAt: string | null;
@@ -328,6 +331,7 @@ export function verifyLicenseToken(token: string) {
 function createLicenseToken(params: {
 	licenseId: string;
 	productSlug: string;
+	companySlug: string | null;
 	machineFingerprint: string;
 	installationId?: string | null;
 	licenseExpiresAt: Date | null;
@@ -344,6 +348,7 @@ function createLicenseToken(params: {
 		jti: randomUUID(),
 		licenseId: params.licenseId,
 		productSlug: params.productSlug,
+		companySlug: params.companySlug,
 		machineFingerprint: params.machineFingerprint,
 		installationId: params.installationId ?? null,
 		licenseExpiresAt: params.licenseExpiresAt?.toISOString() ?? null,
@@ -363,9 +368,11 @@ async function getLicenseByKey(licenseKey: string) {
 			license,
 			productSlug: product.slug,
 			defaultMaxActivations: product.defaultMaxActivations,
+			customerCompanySlug: customer.companySlug,
 		})
 		.from(license)
 		.innerJoin(product, eq(license.productId, product.id))
+		.innerJoin(customer, eq(license.customerId, customer.id))
 		.where(or(eq(license.keyHash, keyHash), eq(license.key, licenseKey)))
 		.limit(1);
 
@@ -484,6 +491,7 @@ export async function activateLicense({
 			...createLicenseToken({
 				licenseId: row.license.id,
 				productSlug: row.productSlug,
+				companySlug: row.customerCompanySlug,
 				machineFingerprint: machineRecord.fingerprint,
 				installationId,
 				licenseExpiresAt: row.license.expiresAt,
@@ -558,6 +566,7 @@ export async function activateLicense({
 		...createLicenseToken({
 			licenseId: row.license.id,
 			productSlug: row.productSlug,
+			companySlug: row.customerCompanySlug,
 			machineFingerprint: machineId,
 			installationId,
 			licenseExpiresAt: row.license.expiresAt,
@@ -630,6 +639,7 @@ export async function validateLicense({
 		...createLicenseToken({
 			licenseId: row.license.id,
 			productSlug: row.productSlug,
+			companySlug: row.customerCompanySlug,
 			machineFingerprint: machineRecord.fingerprint,
 			installationId,
 			licenseExpiresAt: row.license.expiresAt,
