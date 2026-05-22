@@ -1,5 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { DataTable } from "@/components/data-table";
+import { Pagination } from "@/components/pagination";
 import { ClipboardCopy } from "@/components/ui/clipboard-copy";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -53,18 +54,20 @@ function RouteComponent() {
 		setPage(1);
 	}, [debouncedSearch]);
 
-	const productsQuery = useQuery(
-		orpc.admin.products.list.queryOptions({
-			search: debouncedSearch || undefined,
-			page,
-			pageSize,
+	const productsQuery = useQuery({
+		...orpc.admin.products.list.queryOptions({
+			input: {
+				search: debouncedSearch || undefined,
+				page,
+				pageSize,
+			},
 		}),
-	);
+		placeholderData: keepPreviousData,
+	});
 
 	const isTableLoading = productsQuery.isLoading;
 	const isTableFetching = productsQuery.isFetching;
 	const total = productsQuery.data?.total ?? 0;
-	const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
 	const columns = useMemo<ColumnDef<ProductRow>[]>(
 		() => [
@@ -142,61 +145,18 @@ function RouteComponent() {
 					maxHeight="520px"
 					stickyHeader
 				/>
-				<div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-					<span className="text-muted-foreground">
-						{isTableLoading ? "Loading..." : `Page ${page} of ${totalPages} • ${total} total`}
-					</span>
-					<div className="flex items-center gap-2">
-						<Label className="text-xs text-muted-foreground">Rows</Label>
-						<select
-							className="rounded-md border bg-background px-2 py-1 text-xs"
-							value={pageSize}
-							onChange={(event) => {
-								setPageSize(Number(event.target.value));
-								setPage(1);
-							}}
-						>
-							<option value={10}>10</option>
-							<option value={20}>20</option>
-							<option value={50}>50</option>
-						</select>
-					</div>
-					<div className="flex items-center gap-2">
-						<Label className="text-xs text-muted-foreground">Go to</Label>
-						<Input
-							className="h-8 w-20 text-xs"
-							type="number"
-							min={1}
-							max={totalPages}
-							value={page}
-							onChange={(event) => {
-								const next = Number(event.target.value);
-								if (!Number.isNaN(next)) {
-									setPage(Math.min(Math.max(1, next), totalPages));
-								}
-							}}
-							disabled={isTableLoading}
-						/>
-					</div>
-					<div className="ml-auto flex gap-2">
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={isTableLoading || page <= 1}
-							onClick={() => setPage((current) => Math.max(1, current - 1))}
-						>
-							Previous
-						</Button>
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={isTableLoading || page >= totalPages}
-							onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-						>
-							Next
-						</Button>
-					</div>
-				</div>
+				<Pagination
+					page={page}
+					pageSize={pageSize}
+					total={total}
+					isLoading={isTableLoading}
+					isFetching={isTableFetching}
+					onPageChange={setPage}
+					onPageSizeChange={(size) => {
+						setPageSize(size);
+						setPage(1);
+					}}
+				/>
 			</Card>
 
 			<ProductSheet

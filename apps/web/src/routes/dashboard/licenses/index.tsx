@@ -1,18 +1,26 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { DataTable } from "@/components/data-table";
+import { Pagination } from "@/components/pagination";
 import { ClipboardCopy } from "@/components/ui/clipboard-copy";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Combobox,
 	ComboboxCollection,
@@ -101,13 +109,13 @@ function RouteComponent() {
 
 	useEffect(() => {
 		setPage(1);
-	}, [debouncedSearch, statusFilter, typeFilter, expiringInDays, activationsReached, pageSize]);
+	}, [debouncedSearch, statusFilter, typeFilter, expiringInDays, activationsReached]);
 
 	const productsQuery = useQuery(
-		orpc.admin.products.list.queryOptions({ page: 1, pageSize: 200 }),
+		orpc.admin.products.list.queryOptions({ input: { page: 1, pageSize: 200 } }),
 	);
 	const customersQuery = useQuery(
-		orpc.admin.customers.list.queryOptions({ page: 1, pageSize: 200 }),
+		orpc.admin.customers.list.queryOptions({ input: { page: 1, pageSize: 200 } }),
 	);
 	const licenseQueryInput = useMemo(
 		() => ({
@@ -119,23 +127,17 @@ function RouteComponent() {
 			expiringInDays: expiringInDays ? Number.parseInt(expiringInDays, 10) : undefined,
 			activationsReached: activationsReached || undefined,
 		}),
-		[
-			debouncedSearch,
-			page,
-			pageSize,
-			statusFilter,
-			typeFilter,
-			expiringInDays,
-			activationsReached,
-		],
+		[debouncedSearch, page, pageSize, statusFilter, typeFilter, expiringInDays, activationsReached],
 	);
 
-	const licensesQuery = useQuery(orpc.admin.licenses.list.queryOptions(licenseQueryInput));
+	const licensesQuery = useQuery({
+		...orpc.admin.licenses.list.queryOptions({ input: licenseQueryInput }),
+		placeholderData: keepPreviousData,
+	});
 
 	const isTableLoading = licensesQuery.isLoading;
 	const isTableFetching = licensesQuery.isFetching;
 	const total = licensesQuery.data?.total ?? 0;
-	const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
 	const columns = useMemo<ColumnDef<LicenseRow>[]>(
 		() => [
@@ -161,7 +163,7 @@ function RouteComponent() {
 							<div className="text-xs text-muted-foreground">
 								{row.original.customerCompanyName ?? "—"}
 								{row.original.customerCompanySlug
-									? ` • ${row.original.customerCompanySlug}`
+									? ` · ${row.original.customerCompanySlug}`
 									: ""}
 							</div>
 						)}
@@ -230,52 +232,58 @@ function RouteComponent() {
 		<div className="space-y-6">
 			<Card className="p-6">
 				<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-					<div className="flex w-full flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
+					<div className="flex w-full flex-wrap items-center gap-2">
 						<Input
-							placeholder="Search licenses, customers, products..."
+							placeholder="Search licenses, customers, products…"
 							value={search}
 							onChange={(event) => setSearch(event.target.value)}
-							className="md:w-64"
+							className="h-9 md:w-64"
 						/>
-							<select
-								className="h-9 w-full rounded-md border bg-background px-2 text-sm md:w-36"
-								value={statusFilter}
-								onChange={(event) =>
-									setStatusFilter(
-										event.target.value as LicenseFormValues["status"] | "",
-									)
-								}
-							>
-							<option value="">Status</option>
-							<option value="active">Active</option>
-							<option value="suspended">Suspended</option>
-							<option value="expired">Expired</option>
-							<option value="revoked">Revoked</option>
-						</select>
-							<select
-								className="h-9 w-full rounded-md border bg-background px-2 text-sm md:w-32"
-								value={typeFilter}
-								onChange={(event) =>
-									setTypeFilter(event.target.value as LicenseFormValues["type"] | "")
-								}
-							>
-							<option value="">Type</option>
-							<option value="trial">Trial</option>
-							<option value="monthly">Monthly</option>
-							<option value="yearly">Yearly</option>
-							<option value="lifetime">Lifetime</option>
-						</select>
-						<select
-							className="h-9 w-full rounded-md border bg-background px-2 text-sm md:w-40"
-							value={expiringInDays}
-							onChange={(event) => setExpiringInDays(event.target.value)}
+						<Select
+							value={statusFilter}
+							onValueChange={(v) => setStatusFilter(v as LicenseFormValues["status"] | "")}
 						>
-							<option value="">Expiring</option>
-							<option value="7">In 7 days</option>
-							<option value="30">In 30 days</option>
-							<option value="90">In 90 days</option>
-						</select>
-						<label className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+							<SelectTrigger className="h-9 w-full md:w-36">
+								<SelectValue placeholder="Status" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="">All statuses</SelectItem>
+								<SelectItem value="active">Active</SelectItem>
+								<SelectItem value="suspended">Suspended</SelectItem>
+								<SelectItem value="expired">Expired</SelectItem>
+								<SelectItem value="revoked">Revoked</SelectItem>
+							</SelectContent>
+						</Select>
+						<Select
+							value={typeFilter}
+							onValueChange={(v) => setTypeFilter(v as LicenseFormValues["type"] | "")}
+						>
+							<SelectTrigger className="h-9 w-full md:w-32">
+								<SelectValue placeholder="Type" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="">All types</SelectItem>
+								<SelectItem value="trial">Trial</SelectItem>
+								<SelectItem value="monthly">Monthly</SelectItem>
+								<SelectItem value="yearly">Yearly</SelectItem>
+								<SelectItem value="lifetime">Lifetime</SelectItem>
+							</SelectContent>
+						</Select>
+						<Select
+							value={expiringInDays}
+							onValueChange={(v) => setExpiringInDays(v ?? "")}
+						>
+							<SelectTrigger className="h-9 w-full md:w-40">
+								<SelectValue placeholder="Expiring" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="">Any expiry</SelectItem>
+								<SelectItem value="7">In 7 days</SelectItem>
+								<SelectItem value="30">In 30 days</SelectItem>
+								<SelectItem value="90">In 90 days</SelectItem>
+							</SelectContent>
+						</Select>
+						<label className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-accent/40">
 							<Checkbox
 								id="activations-reached"
 								checked={activationsReached}
@@ -284,7 +292,7 @@ function RouteComponent() {
 							<span>Activations reached</span>
 						</label>
 					</div>
-					<div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+					<div className="shrink-0">
 						<Button onClick={() => setCreateOpen(true)}>New license</Button>
 					</div>
 				</div>
@@ -314,61 +322,18 @@ function RouteComponent() {
 					maxHeight="520px"
 					stickyHeader
 				/>
-				<div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-					<span className="text-muted-foreground">
-						{isTableLoading ? "Loading..." : `Page ${page} of ${totalPages} • ${total} total`}
-					</span>
-					<div className="flex items-center gap-2">
-						<Label className="text-xs text-muted-foreground">Rows</Label>
-						<select
-							className="rounded-md border bg-background px-2 py-1 text-xs"
-							value={pageSize}
-							onChange={(event) => {
-								setPageSize(Number(event.target.value));
-								setPage(1);
-							}}
-						>
-							<option value={10}>10</option>
-							<option value={20}>20</option>
-							<option value={50}>50</option>
-						</select>
-					</div>
-					<div className="flex items-center gap-2">
-						<Label className="text-xs text-muted-foreground">Go to</Label>
-						<Input
-							className="h-8 w-20 text-xs"
-							type="number"
-							min={1}
-							max={totalPages}
-							value={page}
-							onChange={(event) => {
-								const next = Number(event.target.value);
-								if (!Number.isNaN(next)) {
-									setPage(Math.min(Math.max(1, next), totalPages));
-								}
-							}}
-							disabled={isTableLoading}
-						/>
-					</div>
-					<div className="ml-auto flex gap-2">
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={isTableLoading || page <= 1}
-							onClick={() => setPage((current) => Math.max(1, current - 1))}
-						>
-							Previous
-						</Button>
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={isTableLoading || page >= totalPages}
-							onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-						>
-							Next
-						</Button>
-					</div>
-				</div>
+				<Pagination
+					page={page}
+					pageSize={pageSize}
+					total={total}
+					isLoading={isTableLoading}
+					isFetching={isTableFetching}
+					onPageChange={setPage}
+					onPageSizeChange={(size) => {
+						setPageSize(size);
+						setPage(1);
+					}}
+				/>
 			</Card>
 
 			<LicenseSheet
@@ -383,9 +348,7 @@ function RouteComponent() {
 				mode="edit"
 				open={Boolean(editingLicense)}
 				onOpenChange={(open) => {
-					if (!open) {
-						setEditingLicense(null);
-					}
+					if (!open) setEditingLicense(null);
 				}}
 				products={productsQuery.data?.items ?? []}
 				customers={customersQuery.data?.items ?? []}
@@ -440,7 +403,7 @@ function LicenseSheet({
 	const customerOptions = customers.map((item) => ({
 		value: item.id,
 		label: item.companyName ?? item.name,
-		description: [item.companySlug, item.email].filter(Boolean).join(" • "),
+		description: [item.companySlug, item.email].filter(Boolean).join(" · "),
 	}));
 	const defaultValues: LicenseFormValues = {
 		productId: "",
@@ -453,9 +416,9 @@ function LicenseSheet({
 		status: initialValues?.license.status ?? "active",
 	};
 
-		const form = useForm({
-			defaultValues,
-			onSubmit: async ({ value, formApi }) => {
+	const form = useForm({
+		defaultValues,
+		onSubmit: async ({ value, formApi }) => {
 			try {
 				if (mode === "create") {
 					await createMutation.mutateAsync({
@@ -524,7 +487,7 @@ function LicenseSheet({
 							<form.Field name="productId">
 								{(field) => (
 									<div className="space-y-2">
-										<Label htmlFor="license-product">Product</Label>
+										<Label>Product</Label>
 										<Combobox
 											items={productOptions}
 											value={selectedProduct}
@@ -556,9 +519,7 @@ function LicenseSheet({
 											type="button"
 											variant="outline"
 											size="sm"
-											onClick={() =>
-												navigate({ to: "/dashboard/products" })
-											}
+											onClick={() => navigate({ to: "/dashboard/products" })}
 										>
 											New product
 										</Button>
@@ -568,7 +529,7 @@ function LicenseSheet({
 							<form.Field name="customerId">
 								{(field) => (
 									<div className="space-y-2">
-										<Label htmlFor="license-customer">Customer</Label>
+										<Label>Customer</Label>
 										<Combobox
 											items={customerOptions}
 											value={selectedCustomer}
@@ -607,9 +568,7 @@ function LicenseSheet({
 											type="button"
 											variant="outline"
 											size="sm"
-											onClick={() =>
-												navigate({ to: "/dashboard/customers" })
-											}
+											onClick={() => navigate({ to: "/dashboard/customers" })}
 										>
 											New customer
 										</Button>
@@ -619,23 +578,23 @@ function LicenseSheet({
 							<form.Field name="type">
 								{(field) => (
 									<div className="space-y-2">
-										<Label htmlFor="license-type">Type</Label>
-											<select
-												id="license-type"
-												className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-												value={field.state.value}
-												onBlur={field.handleBlur}
-												onChange={(event) =>
-													field.handleChange(
-														event.target.value as LicenseFormValues["type"],
-												)
+										<Label>Type</Label>
+										<Select
+											value={field.state.value}
+											onValueChange={(v) =>
+												field.handleChange(v as LicenseFormValues["type"])
 											}
 										>
-											<option value="trial">Trial</option>
-											<option value="monthly">Monthly</option>
-											<option value="yearly">Yearly</option>
-											<option value="lifetime">Lifetime</option>
-										</select>
+											<SelectTrigger>
+												<SelectValue />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="trial">Trial</SelectItem>
+												<SelectItem value="monthly">Monthly</SelectItem>
+												<SelectItem value="yearly">Yearly</SelectItem>
+												<SelectItem value="lifetime">Lifetime</SelectItem>
+											</SelectContent>
+										</Select>
 									</div>
 								)}
 							</form.Field>
@@ -673,23 +632,23 @@ function LicenseSheet({
 					<form.Field name="status">
 						{(field) => (
 							<div className="space-y-2">
-								<Label htmlFor="license-status">Status</Label>
-									<select
-										id="license-status"
-										className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-										value={field.state.value}
-										onBlur={field.handleBlur}
-										onChange={(event) =>
-											field.handleChange(
-												event.target.value as LicenseFormValues["status"],
-										)
+								<Label>Status</Label>
+								<Select
+									value={field.state.value}
+									onValueChange={(v) =>
+										field.handleChange(v as LicenseFormValues["status"])
 									}
 								>
-									<option value="active">Active</option>
-									<option value="suspended">Suspended</option>
-									<option value="expired">Expired</option>
-									<option value="revoked">Revoked</option>
-								</select>
+									<SelectTrigger>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="active">Active</SelectItem>
+										<SelectItem value="suspended">Suspended</SelectItem>
+										<SelectItem value="expired">Expired</SelectItem>
+										<SelectItem value="revoked">Revoked</SelectItem>
+									</SelectContent>
+								</Select>
 							</div>
 						)}
 					</form.Field>
@@ -697,7 +656,7 @@ function LicenseSheet({
 						<form.Subscribe>
 							{(state) => (
 								<Button type="submit" disabled={!state.canSubmit || state.isSubmitting}>
-									{state.isSubmitting ? "Saving..." : "Save"}
+									{state.isSubmitting ? "Saving…" : "Save"}
 								</Button>
 							)}
 						</form.Subscribe>

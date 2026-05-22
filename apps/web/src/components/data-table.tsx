@@ -62,6 +62,11 @@ export function DataTable<TData>({
 
 	return (
 		<div className={cn("relative rounded-md border bg-background", className)}>
+			{isFetching && !isLoading && (
+				<div className="absolute right-2 top-2 z-20">
+					<Loader2Icon className="size-3.5 animate-spin text-muted-foreground" />
+				</div>
+			)}
 			<div className={tableWrapperClass} style={tableWrapperStyle}>
 				<table className="min-w-full text-sm">
 					<thead
