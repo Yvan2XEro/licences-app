@@ -11,7 +11,11 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 
+import { registerCronJobs } from "./cron";
+
 const app = new Hono();
+
+registerCronJobs();
 
 function readHeader(headers: any, name: string) {
 	if (!headers) {
@@ -31,9 +35,11 @@ function readHeader(headers: any, name: string) {
 }
 
 function getExternalBaseUrl(request: { url: string | URL; headers: any }) {
-	const requestUrl = request.url instanceof URL ? request.url : new URL(request.url);
+	const requestUrl =
+		request.url instanceof URL ? request.url : new URL(request.url);
 	const forwardedProto =
-		readHeader(request.headers, "x-forwarded-proto") ?? requestUrl.protocol.replace(":", "");
+		readHeader(request.headers, "x-forwarded-proto") ??
+		requestUrl.protocol.replace(":", "");
 	const forwardedHost =
 		readHeader(request.headers, "x-forwarded-host") ??
 		readHeader(request.headers, "host") ??

@@ -1,4 +1,4 @@
-FROM oven/bun:1.3.10 AS deps
+FROM oven/bun:1.4.4 AS deps
 
 WORKDIR /app
 
@@ -25,7 +25,7 @@ COPY . .
 
 CMD ["bun", "run", "--cwd", "packages/db", "db:migrate"]
 
-FROM oven/bun:1.3.10 AS runtime
+FROM oven/bun:1.4.4 AS runtime
 
 WORKDIR /app
 
