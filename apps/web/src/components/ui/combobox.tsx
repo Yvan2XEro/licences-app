@@ -1,12 +1,16 @@
-import * as React from "react";
 import { Combobox as BaseCombobox } from "@base-ui/react/combobox";
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
+import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-type ComboboxRootProps<Value> = React.ComponentProps<typeof BaseCombobox.Root<Value>>;
+type ComboboxRootProps<Value> = React.ComponentProps<
+	typeof BaseCombobox.Root<Value>
+>;
 
-export function Combobox(props: React.ComponentProps<typeof BaseCombobox.Root<any>>) {
+export function Combobox(
+	props: React.ComponentProps<typeof BaseCombobox.Root<any>>,
+) {
 	return <BaseCombobox.Root {...props} />;
 }
 
@@ -14,12 +18,16 @@ type ComboboxInputProps = React.ComponentProps<typeof BaseCombobox.Input> & {
 	children?: React.ReactNode;
 };
 
-export function ComboboxInput({ className, children, ...props }: ComboboxInputProps) {
+export function ComboboxInput({
+	className,
+	children,
+	...props
+}: ComboboxInputProps) {
 	const hasAddon = Boolean(children);
 	return (
 		<div className="relative">
 			{hasAddon && (
-				<div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+				<div className="absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground">
 					{children}
 				</div>
 			)}
@@ -31,7 +39,7 @@ export function ComboboxInput({ className, children, ...props }: ComboboxInputPr
 				)}
 				{...props}
 			/>
-			<BaseCombobox.Trigger className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
+			<BaseCombobox.Trigger className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground">
 				<ChevronDownIcon className="size-4" />
 			</BaseCombobox.Trigger>
 		</div>
@@ -52,7 +60,11 @@ export function ComboboxContent({
 }: ComboboxContentProps) {
 	return (
 		<BaseCombobox.Portal>
-			<BaseCombobox.Positioner alignOffset={alignOffset} sideOffset={sideOffset} className="z-50">
+			<BaseCombobox.Positioner
+				alignOffset={alignOffset}
+				sideOffset={sideOffset}
+				className="z-50"
+			>
 				<BaseCombobox.Popup
 					className={cn(
 						"w-[--anchor-width] rounded-md border bg-popover p-1 text-popover-foreground shadow-lg outline-none",
@@ -92,13 +104,18 @@ export function ComboboxLabel({
 }: React.ComponentProps<typeof BaseCombobox.GroupLabel>) {
 	return (
 		<BaseCombobox.GroupLabel
-			className={cn("px-2 py-1 text-xs font-medium text-muted-foreground", className)}
+			className={cn(
+				"px-2 py-1 font-medium text-muted-foreground text-xs",
+				className,
+			)}
 			{...props}
 		/>
 	);
 }
 
-export function ComboboxCollection(props: React.ComponentProps<typeof BaseCombobox.Collection>) {
+export function ComboboxCollection(
+	props: React.ComponentProps<typeof BaseCombobox.Collection>,
+) {
 	return <BaseCombobox.Collection {...props} />;
 }
 
@@ -108,7 +125,7 @@ export function ComboboxEmpty({
 }: React.ComponentProps<typeof BaseCombobox.Empty>) {
 	return (
 		<BaseCombobox.Empty
-			className={cn("px-2 py-2 text-sm text-muted-foreground", className)}
+			className={cn("px-2 py-2 text-muted-foreground text-sm", className)}
 			{...props}
 		/>
 	);

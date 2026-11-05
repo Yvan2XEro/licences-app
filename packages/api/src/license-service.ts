@@ -1,4 +1,14 @@
 import {
+	activationLog,
+	customer,
+	db,
+	license,
+	machine,
+	product,
+} from "@licences-app/db";
+
+import { env } from "@licences-app/env/server";
+import {
 	createHash,
 	createPrivateKey,
 	createPublicKey,
@@ -8,16 +18,6 @@ import {
 	verify,
 } from "crypto";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
-
-import { env } from "@licences-app/env/server";
-import {
-	activationLog,
-	customer,
-	license,
-	machine,
-	product,
-} from "@licences-app/db";
-import { db } from "@licences-app/db";
 
 type LicenseStatus = "active" | "suspended" | "expired" | "revoked";
 
@@ -145,7 +145,9 @@ export function getLicenseTokenPublicKeyPem() {
 	}
 
 	if (normalizePem(env.LICENSE_TOKEN_PRIVATE_KEY)) {
-		return resolveLicensePublicKey().export({ format: "pem", type: "spki" }).toString();
+		return resolveLicensePublicKey()
+			.export({ format: "pem", type: "spki" })
+			.toString();
 	}
 
 	return DEFAULT_DEV_PUBLIC_KEY;
@@ -271,7 +273,9 @@ function base64UrlDecode(input: string) {
 }
 
 function signTokenPayload(payload: LicenseTokenPayload) {
-	const header = base64UrlEncode(JSON.stringify({ alg: "EdDSA", typ: "LJWT", kid: "v2" }));
+	const header = base64UrlEncode(
+		JSON.stringify({ alg: "EdDSA", typ: "LJWT", kid: "v2" }),
+	);
 	const body = base64UrlEncode(JSON.stringify(payload));
 	const data = `${header}.${body}`;
 	const signature = sign(null, Buffer.from(data), resolveLicensePrivateKey())
@@ -463,7 +467,12 @@ export async function activateLicense({
 	const existingMachine = await db
 		.select()
 		.from(machine)
-		.where(and(eq(machine.licenseId, row.license.id), eq(machine.fingerprint, machineId)))
+		.where(
+			and(
+				eq(machine.licenseId, row.license.id),
+				eq(machine.fingerprint, machineId),
+			),
+		)
 		.limit(1);
 	const machineRecord = existingMachine[0];
 
@@ -608,7 +617,12 @@ export async function validateLicense({
 	const existingMachine = await db
 		.select()
 		.from(machine)
-		.where(and(eq(machine.licenseId, row.license.id), eq(machine.fingerprint, machineId)))
+		.where(
+			and(
+				eq(machine.licenseId, row.license.id),
+				eq(machine.fingerprint, machineId),
+			),
+		)
 		.limit(1);
 	const machineRecord = existingMachine[0];
 
@@ -681,7 +695,12 @@ export async function deactivateLicense({
 	const existingMachine = await db
 		.select()
 		.from(machine)
-		.where(and(eq(machine.licenseId, row.license.id), eq(machine.fingerprint, machineId)))
+		.where(
+			and(
+				eq(machine.licenseId, row.license.id),
+				eq(machine.fingerprint, machineId),
+			),
+		)
 		.limit(1);
 
 	if (!existingMachine[0] || existingMachine[0].revokedAt) {

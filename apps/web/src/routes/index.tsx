@@ -9,12 +9,12 @@ export const Route = createFileRoute("/")({
 
 const TITLE_TEXT = `
  ___  ___  ___   _________  ________  ________                                   
-|\  \|\  \|\  \ |\___   ___\\   __  \|\   __  \       
-\ \  \\\  \ \  \\|___ \  \_\ \  \|\  \ \  \|\  \     
- \ \  \\\  \ \  \    \ \  \ \ \   _  _\ \   __  \      
-  \ \  \\\  \ \  \____\ \  \ \ \  \\  \\ \  \ \  \     
-   \ \_______\ \_______\ \__\ \ \__\\ _\\ \__\ \__\                  
-    \|_______|\|_______|\|__|  \|__|\|__|\|__|\|__|                           
+|  |  |   |___   ___\\   __  |   __         
+   \\     \\|___   _   |     |       
+    \\                 _  _    __        
+     \\     ____       \\  \\           
+    _______ _______ __  __\\ _\\ __ __                  
+    |_______||_______||__|  |__||__||__||__|                           
                                                                                  
                                                                                
                                                                                 
@@ -36,7 +36,7 @@ function HomeComponent() {
 						<div
 							className={`h-2 w-2 rounded-full ${healthCheck.data ? "bg-green-500" : "bg-red-500"}`}
 						/>
-						<span className="text-sm text-muted-foreground">
+						<span className="text-muted-foreground text-sm">
 							{healthCheck.isLoading
 								? "Checking..."
 								: healthCheck.data

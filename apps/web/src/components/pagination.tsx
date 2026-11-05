@@ -50,7 +50,7 @@ export function Pagination({
 
 			<div className="flex items-center gap-2">
 				<div className="flex items-center gap-1.5">
-					<span className="text-xs text-muted-foreground">Rows</span>
+					<span className="text-muted-foreground text-xs">Rows</span>
 					<Select
 						value={String(pageSize)}
 						onValueChange={(v) => {
@@ -127,7 +127,7 @@ function PageNumbers({
 				p === "..." ? (
 					<span
 						key={`ellipsis-${i}`}
-						className="flex h-8 w-6 items-center justify-center text-xs text-muted-foreground"
+						className="flex h-8 w-6 items-center justify-center text-muted-foreground text-xs"
 					>
 						…
 					</span>

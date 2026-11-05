@@ -1,6 +1,5 @@
-import { ORPCError, os } from "@orpc/server";
-
 import { env } from "@licences-app/env/server";
+import { ORPCError, os } from "@orpc/server";
 
 import type { Context } from "./context";
 

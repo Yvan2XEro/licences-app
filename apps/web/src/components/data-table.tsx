@@ -1,8 +1,8 @@
 import {
+	type ColumnDef,
 	flexRender,
 	getCoreRowModel,
 	getSortedRowModel,
-	type ColumnDef,
 	type SortingState,
 	useReactTable,
 } from "@tanstack/react-table";
@@ -13,9 +13,8 @@ import {
 	Loader2Icon,
 } from "lucide-react";
 import * as React from "react";
-
-import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 type DataTableProps<TData> = {
 	columns: ColumnDef<TData>[];
@@ -63,7 +62,7 @@ export function DataTable<TData>({
 	return (
 		<div className={cn("relative rounded-md border bg-background", className)}>
 			{isFetching && !isLoading && (
-				<div className="absolute right-2 top-2 z-20">
+				<div className="absolute top-2 right-2 z-20">
 					<Loader2Icon className="size-3.5 animate-spin text-muted-foreground" />
 				</div>
 			)}
@@ -71,7 +70,7 @@ export function DataTable<TData>({
 				<table className="min-w-full text-sm">
 					<thead
 						className={cn(
-							"bg-muted/50 text-xs uppercase text-muted-foreground",
+							"bg-muted/50 text-muted-foreground text-xs uppercase",
 							stickyHeader && "sticky top-0 z-10",
 						)}
 					>
@@ -116,40 +115,40 @@ export function DataTable<TData>({
 					<tbody>
 						{isLoading
 							? Array.from({ length: skeletonRows }).map((_, rowIndex) => (
-								<tr
-									key={`skeleton-${rowIndex}`}
-									className="border-b last:border-0"
-								>
-									{columns.map((_, cellIndex) => (
-										<td
-											key={`skeleton-${rowIndex}-${cellIndex}`}
-											className="px-3 py-2"
-										>
-											<Skeleton className="h-4 w-full rounded-sm" />
-										</td>
-									))}
-								</tr>
-							))
+									<tr
+										key={`skeleton-${rowIndex}`}
+										className="border-b last:border-0"
+									>
+										{columns.map((_, cellIndex) => (
+											<td
+												key={`skeleton-${rowIndex}-${cellIndex}`}
+												className="px-3 py-2"
+											>
+												<Skeleton className="h-4 w-full rounded-sm" />
+											</td>
+										))}
+									</tr>
+								))
 							: table.getRowModel().rows.map((row) => (
-								<tr
-									key={row.id}
-									className="border-b transition-colors hover:bg-muted/30 last:border-0"
-								>
-									{row.getVisibleCells().map((cell) => (
-										<td key={cell.id} className="px-3 py-2 align-top">
-											{flexRender(
-												cell.column.columnDef.cell,
-												cell.getContext(),
-											)}
-										</td>
-									))}
-								</tr>
-							))}
+									<tr
+										key={row.id}
+										className="border-b transition-colors last:border-0 hover:bg-muted/30"
+									>
+										{row.getVisibleCells().map((cell) => (
+											<td key={cell.id} className="px-3 py-2 align-top">
+												{flexRender(
+													cell.column.columnDef.cell,
+													cell.getContext(),
+												)}
+											</td>
+										))}
+									</tr>
+								))}
 						{!isLoading && table.getRowModel().rows.length === 0 && (
 							<tr>
 								<td
 									colSpan={columns.length}
-									className="px-3 py-10 text-center text-sm text-muted-foreground"
+									className="px-3 py-10 text-center text-muted-foreground text-sm"
 								>
 									{emptyState ?? emptyMessage}
 								</td>

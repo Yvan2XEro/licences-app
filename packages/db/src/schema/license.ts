@@ -35,7 +35,9 @@ export const product = pgTable("product", {
 	id: uuid("id").defaultRandom().primaryKey(),
 	name: text("name").notNull(),
 	slug: text("slug").notNull().unique(),
-	defaultMaxActivations: integer("default_max_activations").notNull().default(1),
+	defaultMaxActivations: integer("default_max_activations")
+		.notNull()
+		.default(1),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

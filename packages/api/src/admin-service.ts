@@ -1,13 +1,12 @@
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
-
 import {
 	activationLog,
 	customer,
+	db,
 	license,
 	machine,
 	product,
 } from "@licences-app/db";
-import { db } from "@licences-app/db";
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 
 import { generateLicenseKey, hashLicenseKey } from "./license-service";
 
@@ -189,7 +188,10 @@ export async function listLicenses(input: {
 		input.status ? eq(license.status, input.status) : undefined,
 		input.type ? eq(license.type, input.type) : undefined,
 		expiringUntil
-			? and(sql`${license.expiresAt} is not null`, sql`${license.expiresAt} <= ${expiringUntil}`)
+			? and(
+					sql`${license.expiresAt} is not null`,
+					sql`${license.expiresAt} <= ${expiringUntil}`,
+				)
 			: undefined,
 		input.activationsReached
 			? sql`(select count(*) from ${machine} m where m.license_id = ${license.id} and m.revoked_at is null) >= coalesce(${license.maxActivations}, ${product.defaultMaxActivations})`
@@ -343,39 +345,45 @@ export async function getDashboardStats() {
 	const now = new Date();
 	const expiringSoon = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-	const [productsCount, customersCount, licensesCount, statusCounts, expiringCount, reachedCount] =
-		await Promise.all([
-			db.select({ count: sql<number>`count(*)`.mapWith(Number) }).from(product),
-			db.select({ count: sql<number>`count(*)`.mapWith(Number) }).from(customer),
-			db.select({ count: sql<number>`count(*)`.mapWith(Number) }).from(license),
-			db
-				.select({
-					status: license.status,
-					count: sql<number>`count(*)`.mapWith(Number),
-				})
-				.from(license)
-				.groupBy(license.status),
-			db
-				.select({ count: sql<number>`count(*)`.mapWith(Number) })
-				.from(license)
-				.where(
-					and(
-						eq(license.status, "active"),
-						sql`${license.expiresAt} is not null`,
-						sql`${license.expiresAt} <= ${expiringSoon}`,
-					),
+	const [
+		productsCount,
+		customersCount,
+		licensesCount,
+		statusCounts,
+		expiringCount,
+		reachedCount,
+	] = await Promise.all([
+		db.select({ count: sql<number>`count(*)`.mapWith(Number) }).from(product),
+		db.select({ count: sql<number>`count(*)`.mapWith(Number) }).from(customer),
+		db.select({ count: sql<number>`count(*)`.mapWith(Number) }).from(license),
+		db
+			.select({
+				status: license.status,
+				count: sql<number>`count(*)`.mapWith(Number),
+			})
+			.from(license)
+			.groupBy(license.status),
+		db
+			.select({ count: sql<number>`count(*)`.mapWith(Number) })
+			.from(license)
+			.where(
+				and(
+					eq(license.status, "active"),
+					sql`${license.expiresAt} is not null`,
+					sql`${license.expiresAt} <= ${expiringSoon}`,
 				),
-			db
-				.select({ count: sql<number>`count(*)`.mapWith(Number) })
-				.from(license)
-				.innerJoin(product, eq(license.productId, product.id))
-				.where(
-					and(
-						eq(license.status, "active"),
-						sql`(select count(*) from ${machine} m where m.license_id = ${license.id} and m.revoked_at is null) >= coalesce(${license.maxActivations}, ${product.defaultMaxActivations})`,
-					),
+			),
+		db
+			.select({ count: sql<number>`count(*)`.mapWith(Number) })
+			.from(license)
+			.innerJoin(product, eq(license.productId, product.id))
+			.where(
+				and(
+					eq(license.status, "active"),
+					sql`(select count(*) from ${machine} m where m.license_id = ${license.id} and m.revoked_at is null) >= coalesce(${license.maxActivations}, ${product.defaultMaxActivations})`,
 				),
-		]);
+			),
+	]);
 
 	const statusMap = statusCounts.reduce<Record<string, number>>((acc, row) => {
 		acc[row.status] = row.count;

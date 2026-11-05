@@ -22,7 +22,8 @@ const STATUS_BADGE: Record<string, string> = {
 	expired: "bg-slate-200 text-slate-700",
 	revoked: "bg-rose-100 text-rose-700",
 };
-const badgeBase = "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium";
+const badgeBase =
+	"inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium";
 
 const LOGS_PER_PAGE = 10;
 
@@ -103,13 +104,16 @@ function RouteComponent() {
 		: null;
 
 	const totalLogPages = Math.max(1, Math.ceil(logs.length / LOGS_PER_PAGE));
-	const pagedLogs = logs.slice((logPage - 1) * LOGS_PER_PAGE, logPage * LOGS_PER_PAGE);
+	const pagedLogs = logs.slice(
+		(logPage - 1) * LOGS_PER_PAGE,
+		logPage * LOGS_PER_PAGE,
+	);
 
 	return (
 		<div className="space-y-6">
 			<Card className="p-6">
 				<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-					<h2 className="text-lg font-semibold">License detail</h2>
+					<h2 className="font-semibold text-lg">License detail</h2>
 					<div className="flex flex-wrap items-center gap-2">
 						{license.status === "active" && (
 							<Button
@@ -161,9 +165,9 @@ function RouteComponent() {
 						)}
 					</div>
 				</div>
-				<div className="mt-4 grid gap-4 text-sm text-muted-foreground md:grid-cols-2">
+				<div className="mt-4 grid gap-4 text-muted-foreground text-sm md:grid-cols-2">
 					<div className="grid gap-2 rounded-md border p-3">
-						<div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+						<div className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
 							License
 						</div>
 						<div>
@@ -172,12 +176,15 @@ function RouteComponent() {
 						</div>
 						<div className="flex items-center gap-2">
 							<strong className="text-foreground">Status:</strong>
-							<span className={cn(badgeBase, STATUS_BADGE[license.status] ?? "")}>
+							<span
+								className={cn(badgeBase, STATUS_BADGE[license.status] ?? "")}
+							>
 								{license.status}
 							</span>
 						</div>
 						<div>
-							<strong className="text-foreground">Product:</strong> {product.name}
+							<strong className="text-foreground">Product:</strong>{" "}
+							{product.name}
 						</div>
 						<div>
 							<strong className="text-foreground">Type:</strong>{" "}
@@ -197,7 +204,7 @@ function RouteComponent() {
 						)}
 					</div>
 					<div className="grid gap-2 rounded-md border p-3">
-						<div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+						<div className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
 							Customer
 						</div>
 						<div>
@@ -238,9 +245,9 @@ function RouteComponent() {
 			</Card>
 
 			<Card className="p-6">
-				<h3 className="text-lg font-semibold">
+				<h3 className="font-semibold text-lg">
 					Machines{" "}
-					<span className="text-sm font-normal text-muted-foreground">
+					<span className="font-normal text-muted-foreground text-sm">
 						({machines.length})
 					</span>
 				</h3>
@@ -253,12 +260,16 @@ function RouteComponent() {
 						>
 							<div className="text-sm">
 								<div className="font-mono text-xs">{machine.fingerprint}</div>
-								<div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-									<span>Activated: {new Date(machine.activatedAt).toLocaleString()}</span>
-									<span>Last seen: {new Date(machine.lastSeenAt).toLocaleString()}</span>
+								<div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-muted-foreground text-xs">
+									<span>
+										Activated: {new Date(machine.activatedAt).toLocaleString()}
+									</span>
+									<span>
+										Last seen: {new Date(machine.lastSeenAt).toLocaleString()}
+									</span>
 								</div>
 								{machine.revokedAt && (
-									<div className="text-xs text-destructive">
+									<div className="text-destructive text-xs">
 										Revoked: {new Date(machine.revokedAt).toLocaleString()}
 									</div>
 								)}
@@ -293,21 +304,21 @@ function RouteComponent() {
 						</div>
 					))}
 					{machines.length === 0 && (
-						<p className="text-sm text-muted-foreground">No machines yet.</p>
+						<p className="text-muted-foreground text-sm">No machines yet.</p>
 					)}
 				</div>
 			</Card>
 
 			<Card className="p-6">
 				<div className="flex items-center justify-between">
-					<h3 className="text-lg font-semibold">
+					<h3 className="font-semibold text-lg">
 						Activation logs{" "}
-						<span className="text-sm font-normal text-muted-foreground">
+						<span className="font-normal text-muted-foreground text-sm">
 							({logs.length})
 						</span>
 					</h3>
 					{totalLogPages > 1 && (
-						<span className="text-xs text-muted-foreground">
+						<span className="text-muted-foreground text-xs">
 							Page {logPage} / {totalLogPages}
 						</span>
 					)}
@@ -318,26 +329,26 @@ function RouteComponent() {
 						<div key={log.id} className="rounded-md border p-3">
 							<div className="flex flex-wrap items-center gap-2">
 								<span className="font-medium">{log.eventType}</span>
-								<span className="text-xs text-muted-foreground">
+								<span className="text-muted-foreground text-xs">
 									{new Date(log.createdAt).toLocaleString()}
 								</span>
 								{log.reason && (
-									<span className="text-xs text-destructive">{log.reason}</span>
+									<span className="text-destructive text-xs">{log.reason}</span>
 								)}
 							</div>
-							<div className="mt-1 text-xs text-muted-foreground">
+							<div className="mt-1 text-muted-foreground text-xs">
 								IP: {log.ip}
 								{log.userAgent && ` · ${log.userAgent}`}
 							</div>
 						</div>
 					))}
 					{logs.length === 0 && (
-						<p className="text-sm text-muted-foreground">No logs yet.</p>
+						<p className="text-muted-foreground text-sm">No logs yet.</p>
 					)}
 				</div>
 				{totalLogPages > 1 && (
 					<div className="mt-4 flex items-center justify-between text-sm">
-						<span className="text-xs text-muted-foreground">
+						<span className="text-muted-foreground text-xs">
 							{logs.length} events total
 						</span>
 						<div className="flex items-center gap-1">
@@ -358,7 +369,9 @@ function RouteComponent() {
 								size="icon"
 								className="h-8 w-8"
 								disabled={logPage >= totalLogPages}
-								onClick={() => setLogPage((p) => Math.min(totalLogPages, p + 1))}
+								onClick={() =>
+									setLogPage((p) => Math.min(totalLogPages, p + 1))
+								}
 							>
 								<ChevronRightIcon className="size-4" />
 							</Button>

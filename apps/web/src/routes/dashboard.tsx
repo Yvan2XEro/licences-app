@@ -1,22 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+	createFileRoute,
 	Link,
 	Outlet,
-	createFileRoute,
 	redirect,
 	useLocation,
 	useNavigate,
 } from "@tanstack/react-router";
 import {
+	KeyIcon,
 	LayoutDashboardIcon,
 	PackageIcon,
-	UsersIcon,
-	KeyIcon,
 	User,
+	UsersIcon,
 } from "lucide-react";
-
-import { authClient } from "@/lib/auth-client";
-import { cn } from "@/lib/utils";
+import { ModeToggle } from "@/components/mode-toggle";
+import { Button } from "@/components/ui/button";
 import {
 	Sidebar,
 	SidebarContent,
@@ -24,18 +23,18 @@ import {
 	SidebarGroup,
 	SidebarGroupContent,
 	SidebarGroupLabel,
+	SidebarInset,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
 	SidebarProvider,
-	SidebarInset,
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { orpc } from "@/utils/orpc";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ModeToggle } from "@/components/mode-toggle";
 import UserMenu from "@/components/user-menu";
+import { authClient } from "@/lib/auth-client";
+import { cn } from "@/lib/utils";
+import { orpc } from "@/utils/orpc";
 
 export const Route = createFileRoute("/dashboard")({
 	component: RouteComponent,
@@ -75,8 +74,8 @@ function RouteComponent() {
 	if (adminQuery.isError) {
 		return (
 			<div className="p-6">
-				<h1 className="text-2xl font-semibold">Access denied</h1>
-				<p className="mt-2 text-sm text-muted-foreground">
+				<h1 className="font-semibold text-2xl">Access denied</h1>
+				<p className="mt-2 text-muted-foreground text-sm">
 					Your account is not in the admin allowlist.
 				</p>
 			</div>
@@ -170,8 +169,8 @@ function RouteComponent() {
 				<div className="flex flex-col gap-2 border-b px-4 py-3 md:flex-row md:items-center">
 					<SidebarTrigger />
 					<div className="flex flex-col">
-						<div className="text-lg font-semibold">{currentTitle}</div>
-						<nav className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+						<div className="font-semibold text-lg">{currentTitle}</div>
+						<nav className="mt-1 flex flex-wrap items-center gap-2 text-muted-foreground text-xs">
 							{breadcrumbs.map((crumb, index) => (
 								<div key={crumb.to} className="flex items-center gap-2">
 									<Link

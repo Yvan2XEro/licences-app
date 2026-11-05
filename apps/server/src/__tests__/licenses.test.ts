@@ -96,10 +96,10 @@ async function seedLicense({
 		keyHash: hashLicenseKey(licenseKey),
 		status: licenseStatus,
 		type: "monthly",
-			expiresAt,
-			maxActivations,
-			productId: createdProduct.id,
-			customerId: createdCustomer.id,
+		expiresAt,
+		maxActivations,
+		productId: createdProduct.id,
+		customerId: createdCustomer.id,
 	});
 
 	return {

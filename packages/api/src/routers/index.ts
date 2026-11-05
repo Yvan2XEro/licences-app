@@ -1,22 +1,21 @@
 import type { RouterClient } from "@orpc/server";
 import { z } from "zod";
-
-import { adminProcedure, protectedProcedure, publicProcedure } from "../index";
 import {
 	createCustomer,
 	createLicense,
 	createProduct,
-	getLicenseDetail,
 	getDashboardStats,
+	getLicenseDetail,
 	listCustomers,
 	listLicenses,
 	listProducts,
-	revokeMachine,
 	restoreMachine,
+	revokeMachine,
 	updateCustomer,
 	updateLicense,
 	updateProduct,
 } from "../admin-service";
+import { adminProcedure, protectedProcedure, publicProcedure } from "../index";
 import {
 	activateLicense,
 	deactivateLicense,
@@ -68,7 +67,9 @@ const licenseCreateSchema = z.object({
 	type: z.enum(["trial", "monthly", "yearly", "lifetime"]),
 	expiresAt: z.string().datetime().nullable(),
 	maxActivations: z.number().int().positive().nullable(),
-	status: z.enum(["active", "suspended", "expired", "revoked"]).default("active"),
+	status: z
+		.enum(["active", "suspended", "expired", "revoked"])
+		.default("active"),
 });
 
 const licenseUpdateSchema = z.object({
@@ -98,20 +99,26 @@ const licenseFilterSchema = listQuerySchema.extend({
 });
 
 export const appRouter = {
-	healthCheck: publicProcedure.route({ method: "GET", path: "/health" }).handler(() => {
-		return "OK";
-	}),
-	privateData: protectedProcedure.route({ method: "GET", path: "/private-data" }).handler(({ context }) => {
-		return {
-			message: "This is private",
-			user: context.session?.user,
-		};
-	}),
+	healthCheck: publicProcedure
+		.route({ method: "GET", path: "/health" })
+		.handler(() => {
+			return "OK";
+		}),
+	privateData: protectedProcedure
+		.route({ method: "GET", path: "/private-data" })
+		.handler(({ context }) => {
+			return {
+				message: "This is private",
+				user: context.session?.user,
+			};
+		}),
 	licenses: {
-		publicKey: publicProcedure.route({ method: "GET", path: "/licenses/public-key" }).handler(() => ({
-			algorithm: "Ed25519",
-			publicKey: getLicenseTokenPublicKeyPem(),
-		})),
+		publicKey: publicProcedure
+			.route({ method: "GET", path: "/licenses/public-key" })
+			.handler(() => ({
+				algorithm: "Ed25519",
+				publicKey: getLicenseTokenPublicKeyPem(),
+			})),
 		activate: publicProcedure
 			.route({ method: "POST", path: "/licenses/activate" })
 			.input(licenseInputSchema)
@@ -159,13 +166,17 @@ export const appRouter = {
 			}),
 	},
 	admin: {
-		me: adminProcedure.route({ method: "GET", path: "/admin/me" }).handler(({ context }) => {
-			return {
-				user: context.session?.user,
-			};
-		}),
+		me: adminProcedure
+			.route({ method: "GET", path: "/admin/me" })
+			.handler(({ context }) => {
+				return {
+					user: context.session?.user,
+				};
+			}),
 		dashboard: {
-			stats: adminProcedure.route({ method: "GET", path: "/admin/dashboard/stats" }).handler(() => getDashboardStats()),
+			stats: adminProcedure
+				.route({ method: "GET", path: "/admin/dashboard/stats" })
+				.handler(() => getDashboardStats()),
 		},
 		products: {
 			list: adminProcedure

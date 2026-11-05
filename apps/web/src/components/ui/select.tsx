@@ -1,6 +1,6 @@
-import * as React from "react";
 import { Select as BaseSelect } from "@base-ui/react/select";
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
+import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -53,8 +53,8 @@ export function SelectContent({
 				<BaseSelect.Popup
 					className={cn(
 						"w-[--anchor-width] min-w-[8rem] rounded-md border bg-popover p-1 text-popover-foreground shadow-md outline-none",
-						"data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95",
-						"data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95",
+						"data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95 data-[ending-style]:animate-out",
+						"data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 data-[starting-style]:animate-in",
 						className,
 					)}
 					{...props}
@@ -78,7 +78,7 @@ export function SelectItem({
 	return (
 		<BaseSelect.Item
 			className={cn(
-				"relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none",
+				"relative flex cursor-default select-none items-center rounded-sm py-1.5 pr-2 pl-8 text-sm outline-none",
 				"data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground",
 				"data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
 				className,
@@ -107,7 +107,10 @@ export function SelectGroupLabel({
 }: React.ComponentProps<typeof BaseSelect.GroupLabel>) {
 	return (
 		<BaseSelect.GroupLabel
-			className={cn("px-2 py-1.5 text-xs font-semibold text-muted-foreground", className)}
+			className={cn(
+				"px-2 py-1.5 font-semibold text-muted-foreground text-xs",
+				className,
+			)}
 			{...props}
 		/>
 	);
