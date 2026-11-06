@@ -16,7 +16,9 @@ import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as DashboardProductsRouteImport } from './routes/dashboard/products'
 import { Route as DashboardLicensesRouteImport } from './routes/dashboard/licenses'
 import { Route as DashboardCustomersRouteImport } from './routes/dashboard/customers'
+import { Route as DashboardProductsIndexRouteImport } from './routes/dashboard/products/index'
 import { Route as DashboardLicensesIndexRouteImport } from './routes/dashboard/licenses/index'
+import { Route as DashboardProductsProductIdRouteImport } from './routes/dashboard/products/$productId'
 import { Route as DashboardLicensesLicenseIdRouteImport } from './routes/dashboard/licenses/$licenseId'
 
 const LoginRoute = LoginRouteImport.update({
@@ -54,11 +56,22 @@ const DashboardCustomersRoute = DashboardCustomersRouteImport.update({
   path: '/customers',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardProductsIndexRoute = DashboardProductsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardProductsRoute,
+} as any)
 const DashboardLicensesIndexRoute = DashboardLicensesIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => DashboardLicensesRoute,
 } as any)
+const DashboardProductsProductIdRoute =
+  DashboardProductsProductIdRouteImport.update({
+    id: '/$productId',
+    path: '/$productId',
+    getParentRoute: () => DashboardProductsRoute,
+  } as any)
 const DashboardLicensesLicenseIdRoute =
   DashboardLicensesLicenseIdRouteImport.update({
     id: '/$licenseId',
@@ -72,19 +85,22 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/dashboard/customers': typeof DashboardCustomersRoute
   '/dashboard/licenses': typeof DashboardLicensesRouteWithChildren
-  '/dashboard/products': typeof DashboardProductsRoute
+  '/dashboard/products': typeof DashboardProductsRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/licenses/$licenseId': typeof DashboardLicensesLicenseIdRoute
+  '/dashboard/products/$productId': typeof DashboardProductsProductIdRoute
   '/dashboard/licenses/': typeof DashboardLicensesIndexRoute
+  '/dashboard/products/': typeof DashboardProductsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/dashboard/customers': typeof DashboardCustomersRoute
-  '/dashboard/products': typeof DashboardProductsRoute
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/licenses/$licenseId': typeof DashboardLicensesLicenseIdRoute
+  '/dashboard/products/$productId': typeof DashboardProductsProductIdRoute
   '/dashboard/licenses': typeof DashboardLicensesIndexRoute
+  '/dashboard/products': typeof DashboardProductsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -93,10 +109,12 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/dashboard/customers': typeof DashboardCustomersRoute
   '/dashboard/licenses': typeof DashboardLicensesRouteWithChildren
-  '/dashboard/products': typeof DashboardProductsRoute
+  '/dashboard/products': typeof DashboardProductsRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/licenses/$licenseId': typeof DashboardLicensesLicenseIdRoute
+  '/dashboard/products/$productId': typeof DashboardProductsProductIdRoute
   '/dashboard/licenses/': typeof DashboardLicensesIndexRoute
+  '/dashboard/products/': typeof DashboardProductsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -109,16 +127,19 @@ export interface FileRouteTypes {
     | '/dashboard/products'
     | '/dashboard/'
     | '/dashboard/licenses/$licenseId'
+    | '/dashboard/products/$productId'
     | '/dashboard/licenses/'
+    | '/dashboard/products/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/dashboard/customers'
-    | '/dashboard/products'
     | '/dashboard'
     | '/dashboard/licenses/$licenseId'
+    | '/dashboard/products/$productId'
     | '/dashboard/licenses'
+    | '/dashboard/products'
   id:
     | '__root__'
     | '/'
@@ -129,7 +150,9 @@ export interface FileRouteTypes {
     | '/dashboard/products'
     | '/dashboard/'
     | '/dashboard/licenses/$licenseId'
+    | '/dashboard/products/$productId'
     | '/dashboard/licenses/'
+    | '/dashboard/products/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -189,12 +212,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardCustomersRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/products/': {
+      id: '/dashboard/products/'
+      path: '/'
+      fullPath: '/dashboard/products/'
+      preLoaderRoute: typeof DashboardProductsIndexRouteImport
+      parentRoute: typeof DashboardProductsRoute
+    }
     '/dashboard/licenses/': {
       id: '/dashboard/licenses/'
       path: '/'
       fullPath: '/dashboard/licenses/'
       preLoaderRoute: typeof DashboardLicensesIndexRouteImport
       parentRoute: typeof DashboardLicensesRoute
+    }
+    '/dashboard/products/$productId': {
+      id: '/dashboard/products/$productId'
+      path: '/$productId'
+      fullPath: '/dashboard/products/$productId'
+      preLoaderRoute: typeof DashboardProductsProductIdRouteImport
+      parentRoute: typeof DashboardProductsRoute
     }
     '/dashboard/licenses/$licenseId': {
       id: '/dashboard/licenses/$licenseId'
@@ -219,17 +256,30 @@ const DashboardLicensesRouteChildren: DashboardLicensesRouteChildren = {
 const DashboardLicensesRouteWithChildren =
   DashboardLicensesRoute._addFileChildren(DashboardLicensesRouteChildren)
 
+interface DashboardProductsRouteChildren {
+  DashboardProductsProductIdRoute: typeof DashboardProductsProductIdRoute
+  DashboardProductsIndexRoute: typeof DashboardProductsIndexRoute
+}
+
+const DashboardProductsRouteChildren: DashboardProductsRouteChildren = {
+  DashboardProductsProductIdRoute: DashboardProductsProductIdRoute,
+  DashboardProductsIndexRoute: DashboardProductsIndexRoute,
+}
+
+const DashboardProductsRouteWithChildren =
+  DashboardProductsRoute._addFileChildren(DashboardProductsRouteChildren)
+
 interface DashboardRouteChildren {
   DashboardCustomersRoute: typeof DashboardCustomersRoute
   DashboardLicensesRoute: typeof DashboardLicensesRouteWithChildren
-  DashboardProductsRoute: typeof DashboardProductsRoute
+  DashboardProductsRoute: typeof DashboardProductsRouteWithChildren
   DashboardIndexRoute: typeof DashboardIndexRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardCustomersRoute: DashboardCustomersRoute,
   DashboardLicensesRoute: DashboardLicensesRouteWithChildren,
-  DashboardProductsRoute: DashboardProductsRoute,
+  DashboardProductsRoute: DashboardProductsRouteWithChildren,
   DashboardIndexRoute: DashboardIndexRoute,
 }
 

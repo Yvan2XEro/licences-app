@@ -6,6 +6,7 @@ import { createCallable } from "react-call";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Combobox,
 	ComboboxCollection,
@@ -58,8 +59,15 @@ export type LicenseRow = {
 	customerPhone: string | null;
 };
 
+export type LicenseEditValues = {
+	id: string;
+	status: LicenseStatus;
+	expiresAt: Date | null;
+	maxActivations: number | null;
+};
+
 interface Props {
-	initialValues?: LicenseRow;
+	initialValues?: LicenseEditValues;
 }
 
 // Pickers load a single large page; nested creations are inserted into this
@@ -95,6 +103,32 @@ export const LicenseSheet = createCallable<Props, boolean>(
 			orpc.admin.customers.list.queryOptions({ input: PICKER_INPUT }),
 		);
 
+		// Feature selection at creation: checkboxes prefilled from the product
+		// defaults; only the deviations are sent as overrides.
+		const [selectedProductId, setSelectedProductId] = useState("");
+		const [featureOverrides, setFeatureOverrides] = useState<
+			Record<string, boolean>
+		>({});
+		const [featureSearch, setFeatureSearch] = useState("");
+		const changeProduct = (productId: string) => {
+			setSelectedProductId(productId);
+			setFeatureOverrides({});
+			setFeatureSearch("");
+		};
+		const productFeaturesQuery = useQuery({
+			...orpc.admin.products.features.list.queryOptions({
+				input: { productId: selectedProductId },
+			}),
+			enabled: !isEdit && Boolean(selectedProductId),
+		});
+		const productFeatures = selectedProductId
+			? (productFeaturesQuery.data ?? [])
+			: [];
+		const isFeatureChecked = (feature: {
+			id: string;
+			enabledByDefault: boolean;
+		}) => featureOverrides[feature.id] ?? feature.enabledByDefault;
+
 		const createMutation = useMutation({
 			...orpc.admin.licenses.create.mutationOptions(),
 			onSuccess: () => {
@@ -108,6 +142,9 @@ export const LicenseSheet = createCallable<Props, boolean>(
 			onSuccess: () => {
 				queryClient.invalidateQueries({
 					queryKey: orpc.admin.licenses.list.queryKey(),
+				});
+				queryClient.invalidateQueries({
+					queryKey: orpc.admin.licenses.detail.key(),
 				});
 			},
 		});
@@ -148,17 +185,17 @@ export const LicenseSheet = createCallable<Props, boolean>(
 				productId: "",
 				customerId: "",
 				type: "monthly" as LicenseType,
-				expiresAt: initialValues?.license.expiresAt
-					? new Date(initialValues.license.expiresAt).toISOString().slice(0, 16)
+				expiresAt: initialValues?.expiresAt
+					? new Date(initialValues.expiresAt).toISOString().slice(0, 16)
 					: "",
-				maxActivations: initialValues?.license.maxActivations?.toString() ?? "",
-				status: initialValues?.license.status ?? ("active" as LicenseStatus),
+				maxActivations: initialValues?.maxActivations?.toString() ?? "",
+				status: initialValues?.status ?? ("active" as LicenseStatus),
 			},
 			onSubmit: async ({ value }) => {
 				try {
 					if (initialValues) {
 						await updateMutation.mutateAsync({
-							id: initialValues.license.id,
+							id: initialValues.id,
 							status: value.status,
 							expiresAt: value.expiresAt
 								? new Date(value.expiresAt).toISOString()
@@ -180,6 +217,15 @@ export const LicenseSheet = createCallable<Props, boolean>(
 							maxActivations: value.maxActivations
 								? Number.parseInt(value.maxActivations, 10)
 								: null,
+							features: productFeatures
+								.filter(
+									(feature) =>
+										isFeatureChecked(feature) !== feature.enabledByDefault,
+								)
+								.map((feature) => ({
+									featureId: feature.id,
+									enabled: isFeatureChecked(feature),
+								})),
 						});
 						toast.success("License created");
 					}
@@ -205,7 +251,7 @@ export const LicenseSheet = createCallable<Props, boolean>(
 					}
 				}}
 			>
-				<SheetContent>
+				<SheetContent className="overflow-y-auto data-[side=right]:sm:max-w-xl">
 					<SheetHeader>
 						<SheetTitle>
 							{isEdit ? "Edit license" : "Create license"}
@@ -239,6 +285,7 @@ export const LicenseSheet = createCallable<Props, boolean>(
 															onValueChange={(item) => {
 																field.handleChange(item?.value ?? "");
 																setProductInput(item?.label ?? "");
+																changeProduct(item?.value ?? "");
 															}}
 															isItemEqualToValue={(a, b) => a.value === b.value}
 															itemToStringLabel={(item) => item.label}
@@ -279,6 +326,7 @@ export const LicenseSheet = createCallable<Props, boolean>(
 															insertProduct(created);
 															field.handleChange(created.id);
 															setProductInput(created.name);
+															changeProduct(created.id);
 														}}
 													>
 														<PlusIcon />
@@ -288,6 +336,85 @@ export const LicenseSheet = createCallable<Props, boolean>(
 										);
 									}}
 								</form.Field>
+								{selectedProductId && (
+									<div className="space-y-2 rounded-md border p-3">
+										<div className="flex items-center justify-between gap-2">
+											<Label>Features</Label>
+											<span className="text-muted-foreground text-xs">
+												{
+													productFeatures.filter((feature) =>
+														isFeatureChecked(feature),
+													).length
+												}
+												/{productFeatures.length} enabled
+											</span>
+										</div>
+										{productFeatures.length > 8 && (
+											<Input
+												placeholder="Search features..."
+												value={featureSearch}
+												onChange={(event) =>
+													setFeatureSearch(event.target.value)
+												}
+												className="h-8"
+											/>
+										)}
+										{productFeaturesQuery.isLoading && (
+											<p className="text-muted-foreground text-xs">
+												Loading features…
+											</p>
+										)}
+										{!productFeaturesQuery.isLoading &&
+											productFeatures.length === 0 && (
+												<p className="text-muted-foreground text-xs">
+													No features declared for this product.
+												</p>
+											)}
+										{productFeatures.length > 0 && (
+											<div className="max-h-56 space-y-1 overflow-y-auto pr-1">
+												{productFeatures
+													.filter((feature) => {
+														const needle = featureSearch.trim().toLowerCase();
+														if (!needle) return true;
+														return (
+															feature.name.toLowerCase().includes(needle) ||
+															feature.key.toLowerCase().includes(needle)
+														);
+													})
+													.map((feature) => {
+														const checked = isFeatureChecked(feature);
+														return (
+															<label
+																key={feature.id}
+																className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm hover:bg-accent/40"
+															>
+																<Checkbox
+																	checked={checked}
+																	onCheckedChange={(value) =>
+																		setFeatureOverrides((current) => ({
+																			...current,
+																			[feature.id]: Boolean(value),
+																		}))
+																	}
+																/>
+																<span className="min-w-0 flex-1 truncate">
+																	{feature.name}
+																</span>
+																<span className="font-mono text-muted-foreground text-xs">
+																	{feature.key}
+																</span>
+																{checked !== feature.enabledByDefault && (
+																	<span className="text-amber-600 text-xs">
+																		override
+																	</span>
+																)}
+															</label>
+														);
+													})}
+											</div>
+										)}
+									</div>
+								)}
 								<form.Field name="customerId">
 									{(field) => {
 										const selected =

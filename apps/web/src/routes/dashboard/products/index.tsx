@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useEffect, useMemo, useState } from "react";
 
@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { orpc } from "@/utils/orpc";
 
-export const Route = createFileRoute("/dashboard/products")({
+export const Route = createFileRoute("/dashboard/products/")({
 	component: RouteComponent,
 });
 
@@ -70,13 +70,22 @@ function RouteComponent() {
 				header: "Actions",
 				enableSorting: false,
 				cell: ({ row }) => (
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={() => ProductSheet.call({ initialValues: row.original })}
-					>
-						Edit
-					</Button>
+					<div className="flex flex-wrap items-center gap-2">
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => ProductSheet.call({ initialValues: row.original })}
+						>
+							Edit
+						</Button>
+						<Link
+							to="/dashboard/products/$productId"
+							params={{ productId: row.original.id }}
+							className="font-medium text-primary text-sm underline-offset-4 hover:underline"
+						>
+							Details
+						</Link>
+					</div>
 				),
 			},
 		],

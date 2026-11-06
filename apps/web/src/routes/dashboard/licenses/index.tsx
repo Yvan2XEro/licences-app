@@ -190,7 +190,9 @@ function RouteComponent() {
 						<Button
 							variant="outline"
 							size="sm"
-							onClick={() => LicenseSheet.call({ initialValues: row.original })}
+							onClick={() =>
+								LicenseSheet.call({ initialValues: row.original.license })
+							}
 						>
 							Edit
 						</Button>

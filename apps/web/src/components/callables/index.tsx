@@ -4,7 +4,12 @@ import { ProductSheet } from "./product-sheet";
 
 export type { Customer } from "./customer-sheet";
 export { CustomerSheet } from "./customer-sheet";
-export type { LicenseRow, LicenseStatus, LicenseType } from "./license-sheet";
+export type {
+	LicenseEditValues,
+	LicenseRow,
+	LicenseStatus,
+	LicenseType,
+} from "./license-sheet";
 export { LicenseSheet } from "./license-sheet";
 export type { Product } from "./product-sheet";
 export { ProductSheet } from "./product-sheet";
