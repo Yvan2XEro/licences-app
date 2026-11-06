@@ -11,6 +11,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 
+import { mountAdminUi } from "./admin-ui";
 import { registerCronJobs } from "./cron";
 
 const app = new Hono();
@@ -60,6 +61,8 @@ app.use(
 );
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
+
+mountAdminUi(app);
 
 export const apiHandler = new OpenAPIHandler(appRouter, {
 	plugins: [

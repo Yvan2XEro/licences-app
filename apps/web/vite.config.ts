@@ -5,6 +5,9 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 export default defineConfig({
+	// Relative base: the same build works standalone and mounted under a
+	// sub-path (the API serves it at /admin). Safe with hash routing.
+	base: "./",
 	plugins: [tailwindcss(), tanstackRouter({}), react()],
 	resolve: {
 		alias: {

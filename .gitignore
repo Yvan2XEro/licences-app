@@ -33,6 +33,9 @@ yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
 
+# Embedded admin UI build served by the API (copied from apps/web/dist)
+apps/server/public
+
 # Turbo
 .turbo
 

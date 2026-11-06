@@ -18,6 +18,9 @@ FROM deps AS builder
 COPY . .
 
 RUN bun run --cwd apps/server build
+# Embedded admin UI: no VITE_SERVER_URL here, the SPA falls back to
+# window.location.origin since it is served by this same API (at /admin).
+RUN bun run --cwd apps/web build
 
 FROM deps AS migrate
 
@@ -44,6 +47,7 @@ COPY packages/env/package.json packages/env/package.json
 RUN bun install --frozen-lockfile --production --force --no-cache
 
 COPY --from=builder /app/apps/server/dist /app/apps/server/dist
+COPY --from=builder /app/apps/web/dist /app/apps/server/public
 
 USER bun
 

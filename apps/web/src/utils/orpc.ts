@@ -7,7 +7,7 @@ import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { QueryCache, QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-const serverUrl = env.VITE_SERVER_URL;
+const serverUrl = env.VITE_SERVER_URL ?? window.location.origin;
 
 export const queryClient = new QueryClient({
 	queryCache: new QueryCache({
