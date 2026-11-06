@@ -4,16 +4,23 @@ import {
 	createCustomer,
 	createLicense,
 	createProduct,
+	createProductFeature,
+	deleteProduct,
+	deleteProductFeature,
 	getDashboardStats,
 	getLicenseDetail,
+	getProductDetail,
 	listCustomers,
 	listLicenses,
+	listProductFeatures,
 	listProducts,
 	restoreMachine,
 	revokeMachine,
+	setLicenseFeature,
 	updateCustomer,
 	updateLicense,
 	updateProduct,
+	updateProductFeature,
 } from "../admin-service";
 import { adminProcedure, protectedProcedure, publicProcedure } from "../index";
 import {
@@ -70,6 +77,15 @@ const licenseCreateSchema = z.object({
 	status: z
 		.enum(["active", "suspended", "expired", "revoked"])
 		.default("active"),
+	features: z
+		.array(
+			z.object({
+				featureId: z.string().min(1),
+				enabled: z.boolean(),
+			}),
+		)
+		.max(500)
+		.optional(),
 });
 
 const licenseUpdateSchema = z.object({
@@ -91,11 +107,64 @@ const machineRestoreSchema = z.object({
 	machineId: z.string().min(1),
 });
 
+const featureKeySchema = z
+	.string()
+	.min(1)
+	.max(64)
+	.regex(
+		/^[a-z0-9]+(?:[-_.][a-z0-9]+)*$/,
+		"Use lowercase letters, digits and -_. separators",
+	);
+
+const productFeatureCreateSchema = z.object({
+	productId: z.string().min(1),
+	key: featureKeySchema,
+	name: z.string().min(1),
+	description: z.string().optional().or(z.literal("")).nullable(),
+	enabledByDefault: z.boolean().default(false),
+});
+
+const productFeatureUpdateSchema = z.object({
+	id: z.string().min(1),
+	name: z.string().min(1),
+	description: z.string().optional().or(z.literal("")).nullable(),
+	enabledByDefault: z.boolean(),
+});
+
+const productCreateSchema = productSchema.extend({
+	features: z
+		.array(
+			z.object({
+				key: featureKeySchema,
+				name: z.string().min(1),
+				description: z.string().optional().or(z.literal("")).nullable(),
+				enabledByDefault: z.boolean().default(false),
+			}),
+		)
+		.max(500)
+		.optional()
+		.refine(
+			(features) =>
+				!features ||
+				new Set(features.map((feature) => feature.key)).size ===
+					features.length,
+			{ message: "Feature keys must be unique" },
+		),
+});
+
+const licenseFeatureSetSchema = z.object({
+	licenseId: z.string().min(1),
+	featureId: z.string().min(1),
+	// null removes the override: the license falls back to the product default.
+	enabled: z.boolean().nullable(),
+});
+
 const licenseFilterSchema = listQuerySchema.extend({
 	status: z.enum(["active", "suspended", "expired", "revoked"]).optional(),
 	type: z.enum(["trial", "monthly", "yearly", "lifetime"]).optional(),
 	expiringInDays: z.number().int().positive().optional(),
 	activationsReached: z.boolean().optional(),
+	productId: z.string().min(1).optional(),
 });
 
 export const appRouter = {
@@ -192,7 +261,7 @@ export const appRouter = {
 				}),
 			create: adminProcedure
 				.route({ method: "POST", path: "/admin/products/create" })
-				.input(productSchema)
+				.input(productCreateSchema)
 				.handler(async ({ input }) => {
 					return createProduct(input);
 				}),
@@ -200,6 +269,32 @@ export const appRouter = {
 				.route({ method: "POST", path: "/admin/products/update" })
 				.input(productUpdateSchema)
 				.handler(async ({ input }) => updateProduct(input)),
+			detail: adminProcedure
+				.route({ method: "POST", path: "/admin/products/detail" })
+				.input(z.object({ productId: z.string().min(1) }))
+				.handler(async ({ input }) => getProductDetail(input.productId)),
+			delete: adminProcedure
+				.route({ method: "POST", path: "/admin/products/delete" })
+				.input(z.object({ id: z.string().min(1) }))
+				.handler(async ({ input }) => deleteProduct(input.id)),
+			features: {
+				list: adminProcedure
+					.route({ method: "POST", path: "/admin/products/features/list" })
+					.input(z.object({ productId: z.string().min(1) }))
+					.handler(async ({ input }) => listProductFeatures(input.productId)),
+				create: adminProcedure
+					.route({ method: "POST", path: "/admin/products/features/create" })
+					.input(productFeatureCreateSchema)
+					.handler(async ({ input }) => createProductFeature(input)),
+				update: adminProcedure
+					.route({ method: "POST", path: "/admin/products/features/update" })
+					.input(productFeatureUpdateSchema)
+					.handler(async ({ input }) => updateProductFeature(input)),
+				delete: adminProcedure
+					.route({ method: "POST", path: "/admin/products/features/delete" })
+					.input(z.object({ id: z.string().min(1) }))
+					.handler(async ({ input }) => deleteProductFeature(input.id)),
+			},
 		},
 		customers: {
 			list: adminProcedure
@@ -238,6 +333,7 @@ export const appRouter = {
 						type: query.type,
 						expiringInDays: query.expiringInDays,
 						activationsReached: query.activationsReached,
+						productId: query.productId,
 					});
 				}),
 			create: adminProcedure
@@ -251,6 +347,7 @@ export const appRouter = {
 						expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
 						maxActivations: input.maxActivations,
 						status: input.status,
+						features: input.features,
 					});
 				}),
 			update: adminProcedure
@@ -270,6 +367,10 @@ export const appRouter = {
 				.handler(async ({ input }) => {
 					return getLicenseDetail(input.licenseId);
 				}),
+			setFeature: adminProcedure
+				.route({ method: "POST", path: "/admin/licenses/set-feature" })
+				.input(licenseFeatureSetSchema)
+				.handler(async ({ input }) => setLicenseFeature(input)),
 		},
 		machines: {
 			revoke: adminProcedure

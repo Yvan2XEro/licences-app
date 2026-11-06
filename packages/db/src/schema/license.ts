@@ -1,9 +1,11 @@
 import { relations } from "drizzle-orm";
 import {
+	boolean,
 	index,
 	integer,
 	pgEnum,
 	pgTable,
+	primaryKey,
 	text,
 	timestamp,
 	uniqueIndex,
@@ -121,8 +123,74 @@ export const activationLog = pgTable(
 	(table) => [index("activation_log_license_id_idx").on(table.licenseId)],
 );
 
+export const productFeature = pgTable(
+	"product_feature",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		productId: uuid("product_id")
+			.notNull()
+			.references(() => product.id, { onDelete: "cascade" }),
+		key: text("key").notNull(),
+		name: text("name").notNull(),
+		description: text("description"),
+		enabledByDefault: boolean("enabled_by_default").notNull().default(false),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+	(table) => [
+		index("product_feature_product_id_idx").on(table.productId),
+		uniqueIndex("product_feature_product_key_unique").on(
+			table.productId,
+			table.key,
+		),
+	],
+);
+
+export const licenseFeature = pgTable(
+	"license_feature",
+	{
+		licenseId: uuid("license_id")
+			.notNull()
+			.references(() => license.id, { onDelete: "cascade" }),
+		featureId: uuid("feature_id")
+			.notNull()
+			.references(() => productFeature.id, { onDelete: "cascade" }),
+		enabled: boolean("enabled").notNull(),
+		updatedAt: timestamp("updated_at")
+			.defaultNow()
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		primaryKey({ columns: [table.licenseId, table.featureId] }),
+		index("license_feature_license_id_idx").on(table.licenseId),
+	],
+);
+
 export const productRelations = relations(product, ({ many }) => ({
 	licenses: many(license),
+	features: many(productFeature),
+}));
+
+export const productFeatureRelations = relations(
+	productFeature,
+	({ one, many }) => ({
+		product: one(product, {
+			fields: [productFeature.productId],
+			references: [product.id],
+		}),
+		licenseFeatures: many(licenseFeature),
+	}),
+);
+
+export const licenseFeatureRelations = relations(licenseFeature, ({ one }) => ({
+	license: one(license, {
+		fields: [licenseFeature.licenseId],
+		references: [license.id],
+	}),
+	feature: one(productFeature, {
+		fields: [licenseFeature.featureId],
+		references: [productFeature.id],
+	}),
 }));
 
 export const customerRelations = relations(customer, ({ many }) => ({
@@ -140,6 +208,7 @@ export const licenseRelations = relations(license, ({ many, one }) => ({
 	}),
 	machines: many(machine),
 	activationLogs: many(activationLog),
+	licenseFeatures: many(licenseFeature),
 }));
 
 export const machineRelations = relations(machine, ({ one, many }) => ({

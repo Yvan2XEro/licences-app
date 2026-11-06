@@ -3,8 +3,10 @@ import {
 	customer,
 	db,
 	license,
+	licenseFeature,
 	machine,
 	product,
+	productFeature,
 } from "@licences-app/db";
 
 import { env } from "@licences-app/env/server";
@@ -40,6 +42,7 @@ export type LicenseResult =
 				expiresAt: string | null;
 				maxActivations: number;
 				productSlug: string;
+				features: string[];
 			};
 			machine: {
 				fingerprint: string;
@@ -83,6 +86,9 @@ export type LicenseTokenPayload = {
 	licenseExpiresAt: string | null;
 	offlineUntil: string;
 	issuedAt: string;
+	// Optional so tokens issued before the feature rollout stay valid; clients
+	// must treat an absent list as "everything allowed".
+	features?: string[];
 };
 
 const rateLimitStore = new Map<
@@ -234,7 +240,7 @@ async function recordLog({
 	});
 }
 
-function formatLicenseResponse(row: LicenseLookup) {
+function formatLicenseResponse(row: LicenseLookup, features: string[]) {
 	const maxActivations =
 		row.license.maxActivations ?? row.defaultMaxActivations;
 
@@ -244,7 +250,34 @@ function formatLicenseResponse(row: LicenseLookup) {
 		expiresAt: row.license.expiresAt?.toISOString() ?? null,
 		maxActivations,
 		productSlug: row.productSlug,
+		features,
 	};
+}
+
+export async function resolveLicenseFeatures(
+	licenseId: string,
+	productId: string,
+) {
+	const rows = await db
+		.select({
+			key: productFeature.key,
+			enabledByDefault: productFeature.enabledByDefault,
+			override: licenseFeature.enabled,
+		})
+		.from(productFeature)
+		.leftJoin(
+			licenseFeature,
+			and(
+				eq(licenseFeature.featureId, productFeature.id),
+				eq(licenseFeature.licenseId, licenseId),
+			),
+		)
+		.where(eq(productFeature.productId, productId));
+
+	return rows
+		.filter((row) => row.override ?? row.enabledByDefault)
+		.map((row) => row.key)
+		.sort();
 }
 
 export function hashLicenseKey(licenseKey: string) {
@@ -339,6 +372,7 @@ function createLicenseToken(params: {
 	machineFingerprint: string;
 	installationId?: string | null;
 	licenseExpiresAt: Date | null;
+	features: string[];
 }) {
 	const issuedAt = new Date();
 	const offlineUntil = new Date(
@@ -358,6 +392,7 @@ function createLicenseToken(params: {
 		licenseExpiresAt: params.licenseExpiresAt?.toISOString() ?? null,
 		offlineUntil: offlineUntil.toISOString(),
 		issuedAt: issuedAt.toISOString(),
+		features: params.features,
 	};
 	return {
 		token: signTokenPayload(payload),
@@ -464,6 +499,11 @@ export async function activateLicense({
 		return activeError;
 	}
 
+	const features = await resolveLicenseFeatures(
+		row.license.id,
+		row.license.productId,
+	);
+
 	const existingMachine = await db
 		.select()
 		.from(machine)
@@ -492,7 +532,7 @@ export async function activateLicense({
 
 		return {
 			ok: true,
-			license: formatLicenseResponse(row),
+			license: formatLicenseResponse(row, features),
 			machine: {
 				fingerprint: machineRecord.fingerprint,
 				revokedAt: null,
@@ -504,6 +544,7 @@ export async function activateLicense({
 				machineFingerprint: machineRecord.fingerprint,
 				installationId,
 				licenseExpiresAt: row.license.expiresAt,
+				features,
 			}),
 		};
 	}
@@ -567,7 +608,7 @@ export async function activateLicense({
 
 	return {
 		ok: true,
-		license: formatLicenseResponse(row),
+		license: formatLicenseResponse(row, features),
 		machine: {
 			fingerprint: machineId,
 			revokedAt: null,
@@ -579,6 +620,7 @@ export async function activateLicense({
 			machineFingerprint: machineId,
 			installationId,
 			licenseExpiresAt: row.license.expiresAt,
+			features,
 		}),
 	};
 }
@@ -630,6 +672,11 @@ export async function validateLicense({
 		return licenseError("MACHINE_NOT_FOUND", "Machine not found.");
 	}
 
+	const features = await resolveLicenseFeatures(
+		row.license.id,
+		row.license.productId,
+	);
+
 	await db
 		.update(machine)
 		.set({ lastSeenAt: new Date() })
@@ -645,7 +692,7 @@ export async function validateLicense({
 
 	return {
 		ok: true,
-		license: formatLicenseResponse(row),
+		license: formatLicenseResponse(row, features),
 		machine: {
 			fingerprint: machineRecord.fingerprint,
 			revokedAt: null,
@@ -657,6 +704,7 @@ export async function validateLicense({
 			machineFingerprint: machineRecord.fingerprint,
 			installationId,
 			licenseExpiresAt: row.license.expiresAt,
+			features,
 		}),
 	};
 }
@@ -721,9 +769,14 @@ export async function deactivateLicense({
 		eventType: "deactivate",
 	});
 
+	const features = await resolveLicenseFeatures(
+		row.license.id,
+		row.license.productId,
+	);
+
 	return {
 		ok: true,
-		license: formatLicenseResponse(row),
+		license: formatLicenseResponse(row, features),
 		machine: {
 			fingerprint: existingMachine[0].fingerprint,
 			revokedAt: now.toISOString(),
